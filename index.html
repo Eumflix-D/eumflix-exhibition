@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>전람회의 그림 전시관 · 음플릭스</title>
+<meta name="description" content="무소륵스키 〈전람회의 그림〉을 아바타로 걸으며 감상하는 음플릭스 온라인 전시관">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hahmlet:wght@400;600;800&family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;600&display=swap">
+<style>
+/* 1874년 상트페테르부르크 유작전 살롱을 3D로: 적포도주색 벽, 금박 액자, 쪽모이 마루. 화면 전체가 공간이고 UI는 가장자리에 얇게 */
+:root{
+  --wall:#3a1620; --deep:#1a0a0f; --gilt:#c9a24a; --gilt-dim:#8d7136;
+  --plaque:#ece0c4; --ink:#2b1a12; --text:#f1e6d2; --muted:#c4b19a; --stamp:#b3322b;
+  --glass:rgba(26,10,15,.78);
+  --f-display:"Hahmlet","Nanum Myeongjo",serif;
+  --f-body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-ui:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%;overflow:hidden}
+body{background:var(--deep);color:var(--text);font-family:var(--f-body);font-size:15px;line-height:1.55;
+  padding-left:max(0px,env(safe-area-inset-left,0px));padding-right:max(0px,env(safe-area-inset-right,0px))}
+#stage{position:fixed;inset:0;touch-action:none}
+#stage canvas{display:block;width:100%;height:100%}
+.ui{position:fixed;z-index:5;font-family:var(--f-ui)}
+.top{top:calc(10px + env(safe-area-inset-top,0px));left:max(16px,env(safe-area-inset-left,0px));right:max(16px,env(safe-area-inset-right,0px));
+  display:flex;justify-content:space-between;align-items:flex-start;gap:10px;pointer-events:none}
+.top > *{pointer-events:auto}
+.brand{background:var(--glass);border:1px solid var(--gilt-dim);border-radius:3px;padding:8px 12px;backdrop-filter:blur(6px)}
+.brand b{font-family:var(--f-display);font-weight:800;font-size:1.05rem;display:block;line-height:1.2}
+.brand span{font-size:.72rem;color:var(--muted);display:block;margin-top:2px}
+.stats{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.pill{background:var(--glass);border:1px solid var(--gilt-dim);border-radius:999px;padding:6px 11px;font-size:.78rem;color:var(--plaque);white-space:nowrap}
+button.pill{cursor:pointer;font-family:inherit}
+#mini{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right,0px));top:calc(64px + env(safe-area-inset-top,0px));
+  width:200px;height:64px;background:var(--glass);border:1px solid var(--gilt-dim);border-radius:3px;cursor:pointer}
+.plaque{position:fixed;z-index:6;left:50%;transform:translate(-50%,16px);opacity:0;pointer-events:none;
+  bottom:calc(14px + env(safe-area-inset-bottom,0px));width:min(560px,calc(100% - 32px));
+  background:var(--plaque);color:var(--ink);border-radius:2px;padding:14px 18px 14px;box-shadow:0 10px 30px rgba(0,0,0,.6);
+  transition:opacity .35s,transform .35s;max-height:52vh;overflow:auto}
+.plaque.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+.plaque .no{font-size:.7rem;letter-spacing:.14em;color:#7a5a3a;font-family:var(--f-ui)}
+.plaque h1{font-family:var(--f-display);font-weight:800;font-size:1.35rem;line-height:1.25;margin:2px 0 0;text-wrap:balance;padding-right:64px}
+.plaque .orig{font-family:var(--f-display);font-style:italic;color:#6d5440;font-size:.86rem;margin:0 0 6px}
+.plaque p{margin:0 0 6px;max-width:62ch}
+.plaque .now{font-family:var(--f-ui);font-size:.8rem;background:rgba(122,90,58,.13);padding:7px 10px;border-radius:2px;margin:6px 0 8px}
+.plaque .now b{color:#7a3a1a}
+.plaque .row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:var(--f-ui);font-size:.82rem;border:0;border-radius:2px;padding:8px 12px;cursor:pointer;text-decoration:none;display:inline-block}
+.btn.primary{background:var(--wall);color:var(--plaque)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 1px rgba(43,26,18,.4)}
+.seal{position:absolute;right:14px;top:12px;width:56px;height:56px;border:3px double var(--stamp);border-radius:50%;color:var(--stamp);
+  font-family:var(--f-display);font-weight:800;font-size:.74rem;display:grid;place-items:center;text-align:center;line-height:1.1;transform:rotate(-14deg)}
+.seal.pop{animation:pop .45s cubic-bezier(.3,1.6,.5,1)}
+@keyframes pop{from{transform:rotate(-14deg) scale(2.2);opacity:0}}
+#joy{position:fixed;z-index:5;left:max(20px,env(safe-area-inset-left,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  width:116px;height:116px;border-radius:50%;background:rgba(26,10,15,.45);border:1px solid var(--gilt-dim);touch-action:none;display:none}
+#joy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:var(--gilt);opacity:.85}
+.coarse #joy{display:block}
+.coarse .plaque.on ~ #joy{opacity:.3}
+#clap{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(24px + env(safe-area-inset-bottom,0px));
+  width:56px;height:56px;border-radius:50%;border:1px solid var(--gilt);background:var(--glass);font-size:1.5rem;cursor:pointer}
+.plaque.on ~ #clap{bottom:calc(24px + env(safe-area-inset-bottom,0px) + min(52vh,320px))}
+.hint{position:fixed;z-index:4;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));
+  font-family:var(--f-ui);font-size:.78rem;color:var(--muted);background:var(--glass);padding:6px 12px;border-radius:999px;white-space:nowrap;transition:opacity .4s}
+.plaque.on ~ .hint{opacity:0}
+.toast{position:fixed;z-index:9;left:50%;top:calc(110px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--stamp);color:#fff;
+  font-family:var(--f-ui);font-size:.85rem;padding:8px 14px;border-radius:2px;opacity:0;transition:opacity .4s;pointer-events:none}
+.toast.on{opacity:1}
+#gate{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(circle at 50% 35%,#4a1c28,#16080c 70%);
+  padding:24px max(16px,env(safe-area-inset-right,0px)) 24px max(16px,env(safe-area-inset-left,0px));overflow:auto}
+.card{width:min(460px,100%);text-align:center}
+.card .eyebrow{font-family:var(--f-ui);font-size:.74rem;letter-spacing:.18em;color:var(--gilt)}
+.card h2{font-family:var(--f-display);font-weight:800;font-size:clamp(2rem,8vw,2.8rem);line-height:1.1;margin:8px 0 10px;text-wrap:balance}
+.card p{color:var(--muted);margin:0 auto 18px;max-width:40ch}
+.field{display:flex;flex-direction:column;gap:8px;text-align:left;margin:0 auto 14px;max-width:320px;font-family:var(--f-ui);font-size:.8rem;color:var(--muted)}
+.field input{font:inherit;font-size:1rem;padding:10px 12px;border-radius:2px;border:1px solid var(--gilt-dim);background:rgba(0,0,0,.3);color:var(--text)}
+.swatches{display:flex;gap:10px;justify-content:center;margin-bottom:20px}
+.swatches button{width:34px;height:34px;border-radius:50%;border:2px solid transparent;cursor:pointer}
+.swatches button[aria-pressed="true"]{border-color:var(--plaque);box-shadow:0 0 0 2px var(--gilt)}
+.enter{font-family:var(--f-ui);font-size:1rem;font-weight:600;background:var(--gilt);color:var(--ink);border:0;border-radius:2px;padding:12px 28px;cursor:pointer}
+.keys{font-family:var(--f-ui);font-size:.74rem;color:var(--muted);margin-top:16px}
+button:focus-visible,a:focus-visible,input:focus-visible,#mini:focus-visible{outline:2px solid var(--gilt);outline-offset:2px}
+@media (max-width:560px){#mini{width:150px;height:48px}.brand span{display:none}.plaque h1{font-size:1.15rem}.plaque .more{display:none}}
+@media (prefers-reduced-motion:reduce){.plaque,.toast{transition:none}.seal.pop{animation:none}}
+
+.chip{font-family:var(--f-ui);font-size:.78rem;border:1px solid var(--gilt-dim);border-radius:999px;padding:5px 10px;background:transparent;color:var(--plaque);cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--gilt);color:var(--ink);border-color:var(--gilt)}
+#gb{position:fixed;inset:0;z-index:30;background:rgba(10,4,6,.72);display:grid;place-items:center;
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.sheet{width:min(720px,100%);max-height:100%;display:flex;flex-direction:column;background:#2a0f17;border:1px solid var(--gilt-dim);border-radius:3px;box-shadow:0 20px 50px rgba(0,0,0,.6);min-height:0}
+.sheet header{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px 8px}
+.sheet h2{font-family:var(--f-display);font-weight:800;font-size:1.25rem;margin:0;text-wrap:balance}
+.x{background:transparent;border:1px solid var(--gilt-dim);color:var(--plaque);border-radius:2px;padding:6px 10px;cursor:pointer;font-family:var(--f-ui)}
+#gbChips{display:flex;gap:6px;overflow-x:auto;padding:4px 16px 10px;flex:0 0 auto}
+#gbList{list-style:none;margin:0;padding:6px 16px 16px;overflow:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;min-height:120px;flex:1 1 auto}
+.memo{background:var(--note,#f7e27a);color:var(--ink);padding:14px 14px 10px;border-radius:1px;box-shadow:3px 4px 0 rgba(0,0,0,.35);display:flex;flex-direction:column;gap:8px;min-width:0}
+.memo:nth-child(odd){transform:rotate(-.6deg)}.memo:nth-child(even){transform:rotate(.5deg)}
+.memo .m{margin:0;white-space:pre-wrap;word-break:keep-all;overflow-wrap:anywhere;font-size:.95rem}
+.memo .meta{display:flex;flex-direction:column;font-family:var(--f-ui);font-size:.72rem;color:#6d5440;margin-top:auto}
+.empty{grid-column:1/-1;color:var(--muted);text-align:center;padding:24px 0;margin:0}
+#gbForm{border-top:1px solid var(--gilt-dim);padding:12px 16px 14px;display:grid;gap:8px;flex:0 0 auto}
+#gbForm .two{display:flex;gap:8px;flex-wrap:wrap}
+#gbForm input,#gbForm textarea{font:inherit;font-size:.95rem;padding:9px 11px;border-radius:2px;border:1px solid var(--gilt-dim);background:rgba(0,0,0,.3);color:var(--text);min-width:0}
+#gbForm input{flex:0 1 180px}
+#gbForm textarea{resize:vertical;min-height:70px}
+#gbForm .foot{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--f-ui);font-size:.74rem;color:var(--muted)}
+#gbSend{background:var(--gilt);color:var(--ink);border:0;border-radius:2px;padding:9px 16px;font-family:var(--f-ui);font-weight:600;cursor:pointer}
+#gbSend:disabled{opacity:.5}
+#gbMsg{min-height:1.2em;color:#f2c45a;font-family:var(--f-ui);font-size:.82rem;margin:0}
+.nick{display:flex;align-items:center;justify-content:center;gap:10px;margin:0 auto 14px;font-family:var(--f-ui)}
+.nick b{font-family:var(--f-display);font-size:1.3rem;color:var(--plaque)}
+.nick button{background:transparent;border:1px solid var(--gilt-dim);color:var(--plaque);border-radius:999px;padding:5px 12px;cursor:pointer;font:inherit;font-size:.78rem}
+.small{font-family:var(--f-ui);font-size:.74rem;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<div id="stage" aria-label="3D 전시장"></div>
+
+<div class="ui top">
+  <div class="brand"><b>전람회의 그림 전시관</b><span>음플릭스 · Mussorgsky 1874</span></div>
+  <div class="stats">
+    <span class="pill" id="people">혼자 관람 중</span>
+    <span class="pill" id="count">도장 0/10</span>
+    <button class="pill" id="openAll">감상평 모음</button>
+    <button class="pill" id="sound" aria-pressed="true">소리 켜짐</button>
+  </div>
+</div>
+<canvas id="mini" width="400" height="128" tabindex="0" aria-label="전시장 지도. 번호를 누르면 그 그림 앞으로 걸어가요"></canvas>
+
+<article class="plaque" id="plaque" aria-live="polite"></article>
+<div id="joy" aria-hidden="true"><i></i></div>
+<button id="clap" aria-label="박수 보내기" title="박수">👏</button>
+<div class="hint" id="hint">방향키·WASD로 걷기 · 바닥이나 그림을 누르면 그쪽으로 걸어가요</div>
+<div class="toast" id="toast"></div>
+
+<div id="gb" hidden role="dialog" aria-modal="true" aria-labelledby="gbTitle">
+  <div class="sheet">
+    <header><h2 id="gbTitle">감상평</h2><button class="x" id="gbClose">닫기</button></header>
+    <div id="gbChips" role="group" aria-label="그림 고르기"></div>
+    <ul id="gbList"></ul>
+    <form id="gbForm" hidden>
+      <div class="two"><input id="gbNick" maxlength="12" aria-label="별명" autocomplete="off"></div>
+      <textarea id="gbText" maxlength="200" placeholder="이 그림과 음악을 듣고 어떤 느낌이 들었나요?" aria-label="감상평"></textarea>
+      <div class="foot"><span>실명·학교·연락처는 쓰지 마세요. 고운 말이 아닌 글은 자동으로 걸러져요. · <span id="gbLen">0/200</span></span><button id="gbSend" type="submit">메모 붙이기</button></div>
+      <p id="gbMsg" role="status"></p>
+    </form>
+  </div>
+</div>
+
+<div id="gate">
+  <div class="card">
+    <div class="eyebrow">EUMFLIX · PICTURES AT AN EXHIBITION</div>
+    <h2>전람회의 그림<br>전시관</h2>
+    <p>그림 열 점이 걸린 전시장을 걸어 보세요. 걸을 때는 프롬나드가, 그림 앞에 서면 그 그림의 음악이 흘러요. 다른 학교 친구들도 함께 걷고 있을지 몰라요.</p>
+    <div class="nick"><span>오늘 내 별명</span><b id="nickname"></b><button id="reroll" type="button">다시 뽑기</button></div>
+    <div class="swatches" id="sw" role="group" aria-label="아바타 옷 색"></div>
+    <button class="enter" id="enter">입장하기</button>
+    <div class="keys">컴퓨터: 방향키·WASD · 휴대폰: 왼쪽 아래 조이스틱 또는 바닥 터치</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="config.js"></script>
+<script src="filter.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
