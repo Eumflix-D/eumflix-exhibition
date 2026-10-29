@@ -23,7 +23,7 @@ const ROOMS=[null,
   i:'라벨 편곡: <b>오케스트라 전체와 종소리</b>가 울려요.',m:'종소리와 장엄한 화음으로 쌓은 프롬나드',q:'전람회의 그림 키예프의 대문'}
 ];
 const KEYS=[null,'gnomus','castle','tuileries','bydlo','chicks','goldenberg','limoges','catacombs','babayaga','gate'];
-const COLORS=['#b3322b','#3f6f9a','#6a8f4e','#c9a24a','#7d4a8c','#e07a3a'];
+const COLORS=['#2f4b6e','#b5543c','#5b7d5a','#d6a23a','#6e5f8f','#3a3a3a'];
 const yt=q=>'https://www.youtube.com/results?search_query='+encodeURIComponent(q);
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -202,70 +202,78 @@ const W2 = 7, LEN = 48;
 const stage = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.outputEncoding = THREE.sRGBEncoding; stage.appendChild(renderer.domElement);
-const scene = new THREE.Scene(); scene.background = new THREE.Color('#1a0a0f'); scene.fog = new THREE.Fog('#1a0a0f', 20, 52);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#eceae6'); scene.fog = new THREE.Fog('#eceae6', 28, 60);
 const camera = new THREE.PerspectiveCamera(55, 1, .1, 120);
-scene.add(new THREE.HemisphereLight('#ffe6c0', '#3a1a10', .75));
-const sun = new THREE.DirectionalLight('#fff0d8', .45); sun.position.set(3, 10, 4); scene.add(sun);
+scene.add(new THREE.HemisphereLight('#ffffff', '#d8d2c8', .95));
+const sun = new THREE.DirectionalLight('#ffffff', .35); sun.position.set(4, 12, 2); scene.add(sun);
 function canvasTex(w, h, fn, rep) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g, w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]) } t.anisotropy = 8; return t }
-const floorTex = canvasTex(256, 256, (g) => { for (let y = 0; y < 8; y++)for (let x = 0; x < 2; x++) { g.fillStyle = ['#5e3d25', '#583921', '#634028', '#5b3b23'][(x + y * 3) % 4]; g.fillRect(x * 128 + (y % 2) * 64, y * 32, 128, 32); g.fillStyle = 'rgba(0,0,0,.12)'; g.fillRect(x * 128 + (y % 2) * 64, y * 32, 2, 32); g.fillRect(0, y * 32, 256, 1) } }, [7, 24]);
+// 밝은 오크 마루 (길게 깐 널)
+const floorTex = canvasTex(512, 512, (g) => { const tones = ['#cdb08a', '#c8aa83', '#d2b691', '#c4a57e']; for (let y = 0; y < 16; y++) { const off = (y * 197) % 512; for (let k = -1; k < 2; k++) { g.fillStyle = tones[(y + k + 4) % 4]; g.fillRect(off + k * 512, y * 32, 512, 32) } g.fillStyle = 'rgba(90,60,30,.10)'; g.fillRect(0, y * 32, 512, 1); g.fillRect(off % 512, y * 32, 1, 32) } for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(120,85,50,.05)'; g.fillRect(Math.random() * 512, Math.random() * 512, 30 + Math.random() * 60, 1) } }, [3, 12]);
 const floor = new THREE.Mesh(new THREE.PlaneGeometry(W2 * 2, LEN), new THREE.MeshLambertMaterial({ map: floorTex })); floor.rotation.x = -Math.PI / 2; floor.position.z = -LEN / 2; scene.add(floor);
-const rug = new THREE.Mesh(new THREE.PlaneGeometry(3, LEN - 6), new THREE.MeshLambertMaterial({ color: '#5a1a24' })); rug.rotation.x = -Math.PI / 2; rug.position.set(0, .01, -LEN / 2 - 1); scene.add(rug);
-const wallTex = canvasTex(128, 128, (g) => { g.fillStyle = '#3d1520'; g.fillRect(0, 0, 128, 128); g.fillStyle = 'rgba(201,162,74,.07)'; for (let i = 0; i < 4; i++)for (let j = 0; j < 4; j++) { g.beginPath(); g.ellipse(i * 32 + 16, j * 32 + 16, 6, 10, 0, 0, 7); g.fill() } }, [10, 3]);
-const wallMat = new THREE.MeshLambertMaterial({ map: wallTex });
+const wallMat = new THREE.MeshLambertMaterial({ color: '#f7f6f3' });
+const baseMat = new THREE.MeshLambertMaterial({ color: '#e2ded7' });
 function wall(w, h, x, z, ry) {
   const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), wallMat); m.position.set(x, h / 2, z); m.rotation.y = ry; scene.add(m);
-  const b = new THREE.Mesh(new THREE.BoxGeometry(w, 1, .08), new THREE.MeshLambertMaterial({ color: '#2a0f17' })); b.position.set(x, .5, z); b.rotation.y = ry; scene.add(b);
-  const r = new THREE.Mesh(new THREE.BoxGeometry(w, .08, .1), new THREE.MeshLambertMaterial({ color: '#8d7136' })); r.position.set(x, 1.02, z); r.rotation.y = ry; scene.add(r)
+  const b = new THREE.Mesh(new THREE.BoxGeometry(w, .12, .04), baseMat); b.position.set(x, .06, z); b.rotation.y = ry; scene.add(b)
 }
-const H = 5.6; wall(LEN, H, -W2, -LEN / 2, Math.PI / 2); wall(LEN, H, W2, -LEN / 2, -Math.PI / 2); wall(W2 * 2, H, 0, -LEN, 0); wall(W2 * 2, H, 0, 0, Math.PI);
-const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W2 * 2, LEN), new THREE.MeshLambertMaterial({ color: '#20090f' })); ceil.rotation.x = Math.PI / 2; ceil.position.set(0, H, -LEN / 2); scene.add(ceil);
-[-10, -24, -38].forEach(z => { const l = new THREE.PointLight('#ffd9a0', .55, 22, 2); l.position.set(0, 4.6, z); scene.add(l); const s = new THREE.Mesh(new THREE.SphereGeometry(.28, 16, 12), new THREE.MeshBasicMaterial({ color: '#ffe2a8' })); s.position.copy(l.position); scene.add(s) });
-const BENCHES = [[0, -12], [0, -30]]; const benchMat = new THREE.MeshLambertMaterial({ color: '#2b1a12' }), cushion = new THREE.MeshLambertMaterial({ color: '#7a1f24' });
-BENCHES.forEach(([x, z]) => { const b = new THREE.Mesh(new THREE.BoxGeometry(3.4, .45, .9), benchMat); b.position.set(x, .22, z); scene.add(b); const c = new THREE.Mesh(new THREE.BoxGeometry(3.2, .12, .8), cushion); c.position.set(x, .5, z); scene.add(c) });
+const H = 6.2; wall(LEN, H, -W2, -LEN / 2, Math.PI / 2); wall(LEN, H, W2, -LEN / 2, -Math.PI / 2); wall(W2 * 2, H, 0, -LEN, 0); wall(W2 * 2, H, 0, 0, Math.PI);
+const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W2 * 2, LEN), new THREE.MeshLambertMaterial({ color: '#f2f1ee' })); ceil.rotation.x = Math.PI / 2; ceil.position.set(0, H, -LEN / 2); scene.add(ceil);
+// 천장 채광창
+const skyMat = new THREE.MeshBasicMaterial({ color: '#ffffff' });
+for (let z = -4; z > -LEN; z -= 8) { const s = new THREE.Mesh(new THREE.PlaneGeometry(6, 3.2), skyMat); s.rotation.x = Math.PI / 2; s.position.set(0, H - .01, z - 2); scene.add(s) }
+// 그림 비추는 레일 조명
+const rail = new THREE.MeshLambertMaterial({ color: '#2a2a2a' });
+[-W2 + 1.6, W2 - 1.6].forEach(x => { const r = new THREE.Mesh(new THREE.BoxGeometry(.06, .06, LEN - 4), rail); r.position.set(x, H - .3, -LEN / 2); scene.add(r) });
+// 벤치: 오크 상판 + 흰 받침
+const BENCHES = [[0, -12], [0, -30]]; const benchTop = new THREE.MeshLambertMaterial({ color: '#b48a5a' }), benchLeg = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+BENCHES.forEach(([x, z]) => { const t = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, .8), benchTop); t.position.set(x, .46, z); scene.add(t);[-1.4, 1.4].forEach(dx => { const l = new THREE.Mesh(new THREE.BoxGeometry(.12, .42, .7), benchLeg); l.position.set(x + dx, .21, z); scene.add(l) }) });
+// 입구 벽 글씨
 function makeSign() {
-  return canvasTex(1024, 512, (g, w, h) => {
-    g.fillStyle = '#ece0c4'; g.fillRect(0, 0, w, h); g.strokeStyle = '#8d7136'; g.lineWidth = 14; g.strokeRect(20, 20, w - 40, h - 40);
-    g.fillStyle = '#3a1620'; g.textAlign = 'center'; g.font = '800 92px Hahmlet, serif'; g.fillText('전람회의 그림', w / 2, 170);
-    g.font = '36px "IBM Plex Sans KR", sans-serif'; g.fillStyle = '#6d5440'; g.fillText('음플릭스 전시관 · 무소륵스키 1874', w / 2, 240);
-    g.font = '34px "Gowun Dodum", sans-serif'; g.fillStyle = '#2b1a12';
-    ['1873년, 친구 하르트만이 서른아홉에 세상을 떠났어요.', '무소륵스키는 유작전의 그림 열 점을 음악으로 옮겼어요.', '그림 사이를 걷는 발걸음이 바로 프롬나드예요.'].forEach((s, i) => g.fillText(s, w / 2, 320 + i * 52))
+  return canvasTex(1600, 800, (g, w, h) => {
+    g.fillStyle = '#f7f6f3'; g.fillRect(0, 0, w, h); g.fillStyle = '#161616'; g.textAlign = 'left';
+    g.font = '500 34px Pretendard, sans-serif'; g.fillText('음플릭스 온라인 전시', 80, 120);
+    g.font = '800 170px Pretendard, sans-serif'; g.fillText('전람회의 그림', 70, 320);
+    g.font = '500 44px Pretendard, sans-serif'; g.fillStyle = '#55524c'; g.fillText('모데스트 무소륵스키, 1874', 80, 400);
+    g.fillStyle = '#161616'; g.fillRect(80, 450, 1440, 2);
+    g.font = '400 36px Pretendard, sans-serif'; g.fillStyle = '#33312d';
+    ['1873년, 화가 빅토르 하르트만이 서른아홉에 세상을 떠났습니다. 이듬해 열린 유작전에서', '무소륵스키는 그림 열 점을 골라 피아노 모음곡으로 옮겼습니다. 그림 사이를 걷는', '발걸음은 〈프롬나드〉가 되었습니다. 전시실 안쪽으로 걸어 들어가 보세요.'].forEach((s, i) => g.fillText(s, 80, 530 + i * 58))
   })
 }
-const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(5, 2.5), new THREE.MeshBasicMaterial({ map: makeSign() })); signMesh.position.set(0, 2.6, -.06); signMesh.rotation.y = Math.PI; scene.add(signMesh);
+const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshBasicMaterial({ map: makeSign() })); signMesh.position.set(0, 2.7, -.03); signMesh.rotation.y = Math.PI; scene.add(signMesh);
 
 /* 그림 걸기 */
 const PICS = [null];
-const frameMat = new THREE.MeshLambertMaterial({ color: '#c9a24a', emissive: '#3a2a08' });
+const frameMat = new THREE.MeshLambertMaterial({ color: '#1e1e1e' });
+const matMat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
+function placeholder(g, i) { g.fillStyle = '#e9e6e0'; g.fillRect(0, 0, 800, 600); g.strokeStyle = '#cfcac1'; g.lineWidth = 2; for (let k = -600; k < 800; k += 28) { g.beginPath(); g.moveTo(k, 600); g.lineTo(k + 600, 0); g.stroke() } g.fillStyle = '#e9e6e0'; g.fillRect(200, 210, 400, 180); g.fillStyle = '#161616'; g.textAlign = 'center'; g.font = '800 64px Pretendard, sans-serif'; g.fillText(String(i).padStart(2, '0'), 400, 290); g.font = '500 26px Pretendard, sans-serif'; g.fillStyle = '#55524c'; g.fillText('작품 설치 중', 400, 345) }
 function hang(i) {
-  let x, z, ry, nx, nz, w = 3.2, h = 2.4, y = 2.5;
+  let x, z, ry, nx, nz, w = 3.2, h = 2.4, y = 2.45;
   if (i === 10) { x = 0; z = -LEN + .12; ry = 0; nx = 0; nz = 1; w = 4.8; h = 3.6; y = 2.9 }
   else if (i % 2) { x = -W2 + .12; z = -6 - (i - 1) * 4; ry = Math.PI / 2; nx = 1; nz = 0 }
   else { x = W2 - .12; z = -6 - (i - 1) * 4; ry = -Math.PI / 2; nx = -1; nz = 0 }
-  const c = document.createElement('canvas'); c.width = 800; c.height = 600; const g = c.getContext('2d'); cx = g; cx.save(); DRAW[KEYS[i]](2); cx.restore();
+  const c = document.createElement('canvas'); c.width = 800; c.height = 600; const g = c.getContext('2d'); placeholder(g, i);
   const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; tex.anisotropy = 8;
   const grp = new THREE.Group(); grp.position.set(x, y, z); grp.rotation.y = ry; scene.add(grp);
-  const fr = new THREE.Mesh(new THREE.BoxGeometry(1, 1, .14), frameMat); fr.scale.set(w + .36, h + .36, 1); grp.add(fr);
+  const fr = new THREE.Mesh(new THREE.BoxGeometry(1, 1, .06), frameMat); fr.scale.set(w + .1, h + .1, 1); grp.add(fr);
   const pic = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: tex })); pic.scale.set(w, h, 1); pic.position.z = .075; pic.userData.pic = i; grp.add(pic);
-  const glow = canvasTex(256, 256, (gg) => { const r = gg.createRadialGradient(128, 90, 10, 128, 128, 128); r.addColorStop(0, 'rgba(255,225,170,.35)'); r.addColorStop(1, 'rgba(255,225,170,0)'); gg.fillStyle = r; gg.fillRect(0, 0, 256, 256) });
-  const gl = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.9, h * 1.9), new THREE.MeshBasicMaterial({ map: glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending })); gl.position.z = .02; grp.add(gl);
-  const lamp = new THREE.Mesh(new THREE.BoxGeometry(.9, .1, .3), frameMat); lamp.position.set(0, h / 2 + .45, .25); grp.add(lamp);
-  const lab = canvasTex(256, 96, (gg) => { gg.fillStyle = '#ece0c4'; gg.fillRect(0, 0, 256, 96); gg.fillStyle = '#3a1620'; gg.textAlign = 'center'; gg.font = '800 40px Hahmlet, serif'; gg.fillText(ROMAN[i], 128, 46); gg.font = '24px "IBM Plex Sans KR", sans-serif'; gg.fillStyle = '#6d5440'; gg.fillText(ROOMS[i].t.slice(0, 12), 128, 80) });
-  const lb = new THREE.Mesh(new THREE.PlaneGeometry(.8, .3), new THREE.MeshBasicMaterial({ map: lab })); lb.position.set(w / 2 + .75, -h / 2 + .2, .03); grp.add(lb);
+  const spot = new THREE.Mesh(new THREE.CylinderGeometry(.07, .09, .26, 12), rail); spot.position.set(0, (H - .45) - y, 1.25); spot.rotation.x = -.7; grp.add(spot);
+  const lab = canvasTex(512, 300, (gg) => { gg.fillStyle = '#ffffff'; gg.fillRect(0, 0, 512, 300); gg.fillStyle = '#161616'; gg.textAlign = 'left'; gg.font = '700 30px Pretendard, sans-serif'; gg.fillText(String(i).padStart(2, '0'), 34, 62); gg.font = '700 36px Pretendard, sans-serif'; const t = ROOMS[i].t; if (t.length > 11) { gg.fillText(t.slice(0, t.lastIndexOf(' ', 11) > 0 ? t.lastIndexOf(' ', 11) : 11), 34, 130); gg.fillText(t.slice(t.lastIndexOf(' ', 11) > 0 ? t.lastIndexOf(' ', 11) + 1 : 11), 34, 176) } else gg.fillText(t, 34, 130); gg.font = 'italic 400 24px Pretendard, sans-serif'; gg.fillStyle = '#6b6760'; gg.fillText(ROOMS[i].o.slice(0, 30), 34, 232); gg.font = '400 22px Pretendard, sans-serif'; gg.fillText('무소륵스키, 1874', 34, 272) });
+  const lb = new THREE.Mesh(new THREE.PlaneGeometry(.68, .4), new THREE.MeshBasicMaterial({ map: lab })); lb.position.set(w / 2 + .62, 1.5 - y + .0, .02); grp.add(lb);
   // 감상평 메모판 (그림 왼쪽 벽)
   const notes = new THREE.Group(); notes.position.set(-(w / 2 + 1.05), .1, .03); grp.add(notes);
-  const P = { i, ctx: g, tex, pic, fr, grp, lb, notes, real: false, front: new THREE.Vector3(x + nx * 2.4, 0, z + nz * (i === 10 ? 3.4 : 2.4)), n: new THREE.Vector3(nx, 0, nz), center: new THREE.Vector3(x, y, z), w, h, maxW: w, maxH: h };
+  const P = { i, ctx: g, tex, pic, fr, grp, lb, notes, real: false, front: new THREE.Vector3(x + nx * 2.4 - nz * 1.1, 0, z + nz * (i === 10 ? 3.4 : 2.4) + nx * 1.1), n: new THREE.Vector3(nx, 0, nz), center: new THREE.Vector3(x, y, z), w, h, maxW: w, maxH: h };
   PICS.push(P);
   // 선생님 그림 파일이 있으면 바꿔 끼우기
   const src = (CFG.images || {})[i];
   if (src) { const im = new Image(); im.onload = () => { const t2 = new THREE.Texture(im); t2.encoding = THREE.sRGBEncoding; t2.anisotropy = 8; t2.needsUpdate = true; pic.material.map = t2; pic.material.needsUpdate = true; P.real = true;
-    const a = im.naturalWidth / im.naturalHeight; let ww = P.maxW * (i === 10 ? 1.15 : 1.25), hh = ww / a; if (hh > P.maxH * 1.1) { hh = P.maxH * 1.1; ww = hh * a } P.w = ww; P.h = hh; pic.scale.set(ww, hh, 1); fr.scale.set(ww + .36, hh + .36, 1); lb.position.set(ww / 2 + .75, -hh / 2 + .2, .03); notes.position.set(-(ww / 2 + 1.05), .1, .03) }; im.src = src }
+    const a = im.naturalWidth / im.naturalHeight; let ww = P.maxW * (i === 10 ? 1.15 : 1.25), hh = ww / a; if (hh > P.maxH * 1.1) { hh = P.maxH * 1.1; ww = hh * a } P.w = ww; P.h = hh; pic.scale.set(ww, hh, 1); fr.scale.set(ww + .36, hh + .36, 1); lb.position.set(ww / 2 + .62, 1.5 - y, .02); notes.position.set(-(ww / 2 + 1.05), .1, .03) }; im.src = src }
 }
 for (let i = 1; i <= 10; i++)hang(i);
 
 /* 아바타 */
 function nameTag(text, mine) {
-  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d'); g.font = '600 28px "IBM Plex Sans KR", sans-serif';
-  const w = Math.min(250, g.measureText(text).width + 28); g.fillStyle = mine ? 'rgba(201,162,74,.92)' : 'rgba(26,10,15,.8)'; g.fillRect((256 - w) / 2, 10, w, 44); g.fillStyle = mine ? '#2b1a12' : '#f1e6d2'; g.textAlign = 'center'; g.fillText(text, 128, 42);
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d'); g.font = '600 28px Pretendard, sans-serif';
+  const w = Math.min(250, g.measureText(text).width + 28); g.fillStyle = mine ? '#161616' : 'rgba(255,255,255,.94)'; g.fillRect((256 - w) / 2, 10, w, 44); g.fillStyle = mine ? '#ffffff' : '#161616'; g.textAlign = 'center'; g.fillText(text, 128, 42);
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false })); s.scale.set(1.2, .3, 1); s.position.y = 2.15; s.renderOrder = 10; return s
 }
 function makeAvatar(color, name, mine) {
@@ -274,7 +282,6 @@ function makeAvatar(color, name, mine) {
   const head = new THREE.Mesh(new THREE.SphereGeometry(.36, 24, 18), new THREE.MeshLambertMaterial({ color: '#e8b98f' })); head.position.y = 1.45; g.add(head);
   const hair = new THREE.Mesh(new THREE.SphereGeometry(.375, 24, 12, 0, Math.PI * 2, 0, Math.PI * .42), new THREE.MeshLambertMaterial({ color: '#3a2618' })); hair.position.y = 1.47; hair.rotation.x = -.25; g.add(hair);
   const eyeM = new THREE.MeshBasicMaterial({ color: '#1a0f0a' });[-.12, .12].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 8), eyeM); e.position.set(x, 1.45, .33); g.add(e) });
-  const scarf = new THREE.Mesh(new THREE.TorusGeometry(.27, .07, 8, 20), new THREE.MeshLambertMaterial({ color: '#ece0c4' })); scarf.rotation.x = Math.PI / 2; scarf.position.y = 1.08; g.add(scarf);
   const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .3 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; g.add(sh);
   const tag = nameTag(name, mine); g.add(tag); g.userData = { body, head, tag }; scene.add(g); return g;
 }
@@ -287,17 +294,17 @@ let target = null, nearI = 0, nearSince = 0;
 const seen = new Set(store.get('pae-seen', []));
 const plaque = document.getElementById('plaque'), toastEl = document.getElementById('toast');
 function toast(s) { toastEl.textContent = s; toastEl.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove('on'), 2400) }
-function updCount() { document.getElementById('count').textContent = `도장 ${seen.size}/10` }
+function updCount() { document.getElementById('count').textContent = `관람 ${seen.size}/10` }
 updCount();
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
 function showPlaque(i, fresh) {
   if (!i) { plaque.classList.remove('on'); return }
   const r = ROOMS[i], link = listenLink(i), cnt = (GB.byPic[i] || []).length;
-  plaque.innerHTML = `<div class="no">${ROMAN[i]} · ${i} / 10</div><h1></h1><p class="orig"></p>
+  plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p>
    <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><a class="btn primary" target="_blank" rel="noopener"></a>
    <button class="btn ghost" data-gb="write">감상평 남기기</button><button class="btn ghost" data-gb="read">감상평 보기 (${cnt})</button></div>
-   ${seen.has(i) ? `<div class="seal${fresh ? ' pop' : ''}">관람<br>${i}</div>` : ''}`;
+   ${seen.has(i) ? `<div class="seen${fresh ? ' pop' : ''}">관람함</div>` : ''}`;
   plaque.querySelector('h1').textContent = r.t; plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
   plaque.querySelector('.nowtxt').textContent = (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
@@ -320,16 +327,16 @@ function wrapLines(g, text, maxW, maxLines) {
   const joined = out.join(''); if (joined.length < text.replace(/\n/g, '').length && out.length) out[out.length - 1] = out[out.length - 1].slice(0, -1) + '…';
   return out
 }
-const NOTE_COLORS = ['#f7e27a', '#f9c1b8', '#c5e3a5', '#bfdcef'];
+const NOTE_COLORS = ['#fff1a8', '#ffd8cc', '#d6ead0', '#d4e4f4'];
 function noteTex(item, k) {
   return canvasTex(256, 256, (g) => {
-    g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(10, 12, 240, 240); g.fillStyle = NOTE_COLORS[k % 4]; g.fillRect(4, 4, 240, 240);
-    g.fillStyle = 'rgba(179,50,43,.85)'; g.beginPath(); g.arc(124, 18, 9, 0, 7); g.fill();
-    g.fillStyle = '#2b1a12'; g.font = '26px "Gowun Dodum", sans-serif'; wrapLines(g, item.m, 210, 5).forEach((l, j) => g.fillText(l, 20, 66 + j * 34));
-    g.font = '600 18px "IBM Plex Sans KR", sans-serif'; g.fillStyle = '#6d5440'; g.fillText('— ' + item.n, 20, 232)
+    g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(9, 10, 240, 240); g.fillStyle = NOTE_COLORS[k % 4]; g.fillRect(4, 4, 240, 240);
+    g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(84, 0, 80, 18);
+    g.fillStyle = '#161616'; g.font = '400 25px Pretendard, sans-serif'; wrapLines(g, item.m, 210, 5).forEach((l, j) => g.fillText(l, 20, 66 + j * 34));
+    g.font = '600 18px Pretendard, sans-serif'; g.fillStyle = '#6b6760'; g.fillText('— ' + item.n, 20, 232)
   })
 }
-function moreTex(n) { return canvasTex(256, 80, (g) => { g.fillStyle = '#ece0c4'; g.fillRect(0, 0, 256, 80); g.fillStyle = '#3a1620'; g.textAlign = 'center'; g.font = '600 26px "IBM Plex Sans KR", sans-serif'; g.fillText(n ? `감상평 ${n}개 · 모두 보기` : '첫 감상평을 남겨 주세요', 128, 50) }) }
+function moreTex(n) { return canvasTex(256, 80, (g) => { g.fillStyle = '#161616'; g.fillRect(0, 0, 256, 80); g.fillStyle = '#ffffff'; g.textAlign = 'center'; g.font = '600 25px Pretendard, sans-serif'; g.fillText(n ? `감상평 ${n}개 모두 보기` : '첫 감상평 남기기', 128, 50) }) }
 function buildNotes() {
   for (let i = 1; i <= 10; i++) {
     const P = PICS[i], list = GB.byPic[i] || []; P.notes.children.slice().forEach(c => { P.notes.remove(c); c.material.map && c.material.map.dispose() });
@@ -344,16 +351,16 @@ function setItems(items) {
 }
 function loadGB() { if (!GB.ok) return; fetch(CFG.guestbookUrl).then(r => r.json()).then(d => { if (d && d.ok && Array.isArray(d.items)) setItems(d.items) }).catch(() => { }) }
 function renderChips() {
-  gbChips.innerHTML = ''; [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(i => { const b = el('button', 'chip', i ? ROMAN[i] + ' ' + ROOMS[i].t : '전체'); b.setAttribute('aria-pressed', GB.cur === i); b.onclick = () => { GB.cur = i; renderGB() }; gbChips.appendChild(b) })
+  gbChips.innerHTML = ''; [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(i => { const b = el('button', 'chip', i ? String(i).padStart(2, '0') + ' ' + ROOMS[i].t : '전체'); b.setAttribute('aria-pressed', GB.cur === i); b.onclick = () => { GB.cur = i; renderGB() }; gbChips.appendChild(b) })
 }
 function renderGB() {
   renderChips();
-  document.getElementById('gbTitle').textContent = GB.cur ? `${ROMAN[GB.cur]}. ${ROOMS[GB.cur].t} 감상평` : '모든 감상평';
+  document.getElementById('gbTitle').textContent = GB.cur ? `${String(GB.cur).padStart(2, '0')} ${ROOMS[GB.cur].t} · 감상평` : '모든 감상평';
   document.getElementById('gbForm').hidden = !GB.cur || !GB.ok;
   const list = (GB.cur ? (GB.byPic[GB.cur] || []) : GB.items).slice().reverse(); gbList.innerHTML = '';
   if (!GB.ok) { gbList.appendChild(el('p', 'empty', '방명록은 곧 열려요. 선생님이 준비 중이에요.')); return }
   if (!list.length) { gbList.appendChild(el('p', 'empty', GB.cur ? '아직 감상평이 없어요. 첫 번째로 남겨 볼까요?' : '아직 감상평이 없어요. 그림 앞에서 첫 감상평을 남겨 주세요.')); return }
-  list.forEach((x, k) => { const li = el('li', 'memo'); li.style.setProperty('--note', NOTE_COLORS[k % 4]); li.appendChild(el('p', 'm', x.m)); const meta = el('div', 'meta'); meta.appendChild(el('b', null, x.n)); meta.appendChild(el('span', null, (GB.cur ? '' : ROMAN[x.p] + ' ' + ROOMS[x.p].t + ' · ') + fmtDate(x.t))); li.appendChild(meta); gbList.appendChild(li) });
+  list.forEach((x, k) => { const li = el('li', 'memo'); li.style.setProperty('--note', NOTE_COLORS[k % 4]); li.appendChild(el('p', 'm', x.m)); const meta = el('div', 'meta'); meta.appendChild(el('b', null, x.n)); meta.appendChild(el('span', null, (GB.cur ? '' : String(x.p).padStart(2, '0') + ' ' + ROOMS[x.p].t + ' · ') + fmtDate(x.t))); li.appendChild(meta); gbList.appendChild(li) });
 }
 function openGB(i, write) { GB.cur = i; gbMsg.textContent = ''; gbEl.hidden = false; renderGB(); if (write && GB.ok && i) setTimeout(() => gbText.focus(), 50); else document.getElementById('gbClose').focus() }
 document.getElementById('gbClose').onclick = () => { gbEl.hidden = true };
@@ -460,7 +467,7 @@ document.getElementById('enter').onclick = () => {
   me = makeAvatar(COLORS[myColor], nickOf(myA, myB) + ' (나)', true); me.position.copy(pos); startTogether();
   setTimeout(() => document.getElementById('hint').style.opacity = 0, 9000)
 };
-const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 켜짐' : '소리 꺼짐'; sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
+const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
 
 /* ================= 루프 ================= */
 const angLerp = (a, b, k) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * k };
@@ -485,24 +492,23 @@ function frame(now) {
   let ni = 0, nd = 1e9; for (let i = 1; i <= 10; i++) { const d = pos.distanceTo(PICS[i].front); if (d < nd) { nd = d; ni = i } }
   const near = me && nd < (ni === 10 ? 3.2 : 2.6) ? ni : 0;
   if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
-  if (nearI && !seen.has(nearI) && t - nearSince > 1.5) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); showPlaque(nearI, true); toast(seen.size === 10 ? '🎉 열 점을 모두 감상했어요! 산책 완주' : `관람 도장 ${seen.size}/10`) }
+  if (nearI && !seen.has(nearI) && t - nearSince > 1.5) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); showPlaque(nearI, true); toast(seen.size === 10 ? '열 점을 모두 감상했어요. 관람 완주!' : `관람 ${seen.size}/10 완료`) }
   want = nearI ? KEYS[nearI] : 'promenade';
-  if (nearI && !PICS[nearI].real && !RM && now - picClock > 33) { picClock = now; const p = PICS[nearI]; cx = p.ctx; cx.save(); DRAW[KEYS[nearI]](t); cx.restore(); p.tex.needsUpdate = true }
   if (me) { me.position.set(pos.x, moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI; me.userData.body.rotation.z = moving && !RM ? Math.sin(walkT) * .06 : 0; sendPresence(false) }
   for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r }
   for (let k = claps.length - 1; k >= 0; k--) { const c = claps[k], a = (now - c.t0) / 1400; c.s.position.y = 2.7 + a * .8; c.s.material.opacity = 1 - a; if (a >= 1) { c.g.remove(c.s); claps.splice(k, 1) } }
   let cp, cl;
-  if (nearI) { const p = PICS[nearI], back = (nearI === 10 ? 7.2 : 5.2) * (camera.aspect < 1 ? 1.45 : 1); cp = p.center.clone().addScaledVector(p.n, back).setY(2.4); cl = p.center.clone().setY(p.center.y - (camera.aspect < 1 ? 1.3 : .75)) }
+  if (nearI) { const p = PICS[nearI], back = (nearI === 10 ? 7.2 : 5.2) * (camera.aspect < 1 ? 1.45 : 1); cp = p.center.clone().addScaledVector(p.n, back).setY(2.6); cl = p.center.clone().setY(p.center.y - (camera.aspect < 1 ? 1.2 : .55)) }
   else { cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * 5.4, 3.3, pos.z + Math.cos(camYaw) * 5.4); cl = new THREE.Vector3(pos.x, 1.3, pos.z) }
   cp.x = Math.max(-W2 + .4, Math.min(W2 - .4, cp.x)); cp.z = Math.max(-LEN + .4, Math.min(-.3, cp.z));
   const k = 1 - Math.exp(-3.2 * dt); camPos.lerp(cp, k); camLook.lerp(cl, k); camera.position.copy(camPos); camera.lookAt(camLook);
   renderer.render(scene, camera); drawMini(); requestAnimationFrame(frame);
 }
 function drawMini() {
-  mg.clearRect(0, 0, 400, 128); mg.strokeStyle = '#8d7136'; mg.lineWidth = 2; mg.strokeRect(18, 12, 364, 104);
-  BENCHES.forEach(([x, z]) => { const [a, b] = mapXY(x, z); mg.fillStyle = '#5a1a24'; mg.fillRect(a - 5, b - 17, 10, 34) });
-  for (let i = 1; i <= 10; i++) { const p = PICS[i].center, [a, b] = mapXY(p.x, p.z); mg.fillStyle = seen.has(i) ? '#b3322b' : '#c9a24a'; mg.beginPath(); mg.arc(a, b, 12, 0, 7); mg.fill(); mg.fillStyle = '#1a0a0f'; mg.font = '600 15px "IBM Plex Sans KR", sans-serif'; mg.textAlign = 'center'; mg.fillText(i, a, b + 5) }
-  for (const o of others.values()) { const [a, b] = mapXY(o.cur.x, o.cur.z); mg.fillStyle = COLORS[o.c]; mg.beginPath(); mg.arc(a, b, 7, 0, 7); mg.fill() }
-  if (me) { const [a, b] = mapXY(pos.x, pos.z); mg.fillStyle = '#fff'; mg.beginPath(); mg.arc(a, b, 9, 0, 7); mg.fill(); mg.fillStyle = COLORS[myColor]; mg.beginPath(); mg.arc(a, b, 6, 0, 7); mg.fill() }
+  mg.clearRect(0, 0, 400, 128); mg.fillStyle = '#ffffff'; mg.fillRect(0, 0, 400, 128); mg.strokeStyle = '#161616'; mg.lineWidth = 2; mg.strokeRect(18, 12, 364, 104);
+  BENCHES.forEach(([x, z]) => { const [a, b] = mapXY(x, z); mg.fillStyle = '#d8cbb8'; mg.fillRect(a - 4, b - 17, 8, 34) });
+  for (let i = 1; i <= 10; i++) { const p = PICS[i].center, [a, b] = mapXY(p.x, p.z); mg.fillStyle = seen.has(i) ? '#161616' : '#ffffff'; mg.strokeStyle = '#161616'; mg.lineWidth = 1.5; mg.beginPath(); mg.arc(a, b, 11, 0, 7); mg.fill(); mg.stroke(); mg.fillStyle = seen.has(i) ? '#ffffff' : '#161616'; mg.font = '700 13px Pretendard, sans-serif'; mg.textAlign = 'center'; mg.fillText(i, a, b + 5) }
+  for (const o of others.values()) { const [a, b] = mapXY(o.cur.x, o.cur.z); mg.fillStyle = COLORS[o.c]; mg.beginPath(); mg.arc(a, b, 6, 0, 7); mg.fill() }
+  if (me) { const [a, b] = mapXY(pos.x, pos.z); mg.fillStyle = '#2346d1'; mg.beginPath(); mg.arc(a, b, 8, 0, 7); mg.fill(); mg.strokeStyle = '#ffffff'; mg.lineWidth = 2; mg.stroke() }
 }
 requestAnimationFrame(frame);
