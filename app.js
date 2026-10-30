@@ -322,7 +322,16 @@ function nameTag(text, mine) {
   const w = Math.min(250, g.measureText(text).width + 28); g.fillStyle = mine ? '#161616' : 'rgba(255,255,255,.94)'; g.fillRect((256 - w) / 2, 10, w, 44); g.fillStyle = mine ? '#ffffff' : '#161616'; g.textAlign = 'center'; g.fillText(text, 128, 42);
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false })); s.scale.set(1.2, .3, 1); s.position.y = 2.15; s.renderOrder = 10; return s
 }
-const KINDS = [{ n: '학생', d: '교복 재킷' }, { n: '단발 학생', d: '교복 원피스' }, { n: '화가', d: '베레모와 팔레트' }, { n: '지휘자', d: '연미복과 지휘봉' }, { n: '바이올리니스트', d: '바이올린을 든 연주자' }, { n: '고양이', d: '꼬리 달린 관람객' }];
+const KINDS = [{ n: '학생', d: '교복 재킷' }, { n: '단발 학생', d: '교복 원피스' }, { n: '화가', d: '베레모와 팔레트' }, { n: '지휘자', d: '연미복과 지휘봉' }, { n: '바이올리니스트', d: '바이올린을 든 연주자' }, { n: '고양이', d: '꼬리 달린 관람객' },
+  { n: '음플 검은 머리', d: '음플릭스 캐릭터', img: 'assets/chars/c1.png', hair: '#0b0b0b' }, { n: '음플 장미', d: '음플릭스 캐릭터', img: 'assets/chars/c2.png', hair: '#0b0b0b' }, { n: '음플 갈색 머리', d: '음플릭스 캐릭터', img: 'assets/chars/c3.png', hair: '#3a1a08' }];
+const KIND_ORDER = [6, 7, 8, 0, 1, 2, 3, 4, 5];
+const CHAR_TEX = {};
+function charTex(k) {
+  if (CHAR_TEX[k]) return CHAR_TEX[k];
+  const front = new THREE.Texture(), back = new THREE.Texture(); front.encoding = back.encoding = THREE.sRGBEncoding;
+  const im = new Image(); im.onload = () => { front.image = im; front.needsUpdate = true; const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = KINDS[k].hair; g.fillRect(0, 0, c.width, c.height); back.image = c; back.needsUpdate = true; CHAR_TEX[k].aspect = im.width / im.height };
+  im.src = KINDS[k].img; return (CHAR_TEX[k] = { front, back, aspect: 1 })
+}
 const MAT = {}; const M = c => MAT[c] || (MAT[c] = new THREE.MeshLambertMaterial({ color: c }));
 function onHead(x, dy, r) { return Math.sqrt(Math.max(0, r * r - x * x - dy * dy)) }
 function makeAvatar(color, name, mine, kind) {
@@ -340,6 +349,15 @@ function makeAvatar(color, name, mine, kind) {
   if (kind === 3) { const bat = new THREE.Mesh(new THREE.CylinderGeometry(.012, .008, .5, 6), M('#f5f5f5')); bat.position.set(0, -.62, .22); bat.rotation.x = 1.1; arms[1].add(bat) }
   if (kind === 4) { const v = new THREE.Group(); const vb = new THREE.Mesh(new THREE.SphereGeometry(.15, 16, 12), M('#9a5422')); vb.scale.set(1, .55, 1.5); v.add(vb); const nk = new THREE.Mesh(new THREE.BoxGeometry(.045, .045, .38), M('#2a1a10')); nk.position.z = .36; v.add(nk); v.position.set(-.26, 1.2, .14); v.rotation.set(.1, .7, .2); g.add(v); arms[0].rotation.set(-.9, 0, -.3) }
   const R = .42, HY = 1.58;
+  if (KINDS[kind].img) {
+    const tx = charTex(kind), head = new THREE.Group(); head.position.y = HY + .08; g.add(head);
+    const fm = new THREE.MeshLambertMaterial({ map: tx.front, transparent: true, alphaTest: .4 }), bm = new THREE.MeshLambertMaterial({ map: tx.back, transparent: true, alphaTest: .4 });
+    const f = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.06), fm); f.position.z = .02; head.add(f);
+    const bk = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.06), bm); bk.position.z = -.02; bk.rotation.y = Math.PI; head.add(bk);
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .25 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; g.add(sh);
+    const tag = nameTag(name, mine); tag.position.y = 2.5; g.add(tag);
+    g.userData = { body, head, tag, arms, legs, kind }; scene.add(g); return g;
+  }
   const head = new THREE.Mesh(new THREE.SphereGeometry(R, 28, 20), M(cat ? color : SK)); head.position.y = HY; g.add(head);
   const cap = (c, cov, tilt, y) => { const h = new THREE.Mesh(new THREE.SphereGeometry(R + .025, 24, 14, 0, Math.PI * 2, 0, Math.PI * cov), M(c)); h.position.y = y || HY + .02; h.rotation.x = tilt; g.add(h); return h };
   if (kind === 0) cap('#2e2219', .45, -.3);
@@ -365,7 +383,7 @@ function animateAvatar(g, ph, mv) {
 }
 
 /* ================= 상태 ================= */
-let me = null, myK = store.get('pae-k', 0), preview = null, myColor = store.get('pae-color', 0), myA = store.get('pae-a', Math.floor(Math.random() * 16)), myB = store.get('pae-b', Math.floor(Math.random() * 16));
+let me = null, myK = store.get('pae-k', 6), preview = null, myColor = store.get('pae-color', 0), myA = store.get('pae-a', Math.floor(Math.random() * 16)), myB = store.get('pae-b', Math.floor(Math.random() * 16));
 let heading = Math.PI, camYaw = 0, walkT = 0, moving = false;
 const pos = new THREE.Vector3(0, 0, -3.5);
 let target = null, nearI = 0, nearSince = 0;
@@ -535,10 +553,10 @@ mini.addEventListener('click', e => { const r = mini.getBoundingClientRect(), mx
 /* 입장: 어두운 전시실 입구에서 캐릭터 고르기 */
 const sw = document.getElementById('sw'), kindsEl = document.getElementById('kinds'), kindDesc = document.getElementById('kindDesc');
 const PREV = new THREE.Vector3(0, 0, -5.2);
-function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].d;[...kindsEl.children].forEach((x, k) => x.setAttribute('aria-pressed', k === myK)) }
-KINDS.forEach((kd, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = kd.n; b.onclick = () => { myK = i; buildPreview() }; kindsEl.appendChild(b) });
-document.getElementById('kPrev').onclick = () => { myK = (myK + KINDS.length - 1) % KINDS.length; buildPreview() };
-document.getElementById('kNext').onclick = () => { myK = (myK + 1) % KINDS.length; buildPreview() };
+function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].d;[...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
+KIND_ORDER.forEach(i => { const kd = KINDS[i], b = document.createElement('button'); b.type = 'button'; b.textContent = kd.n; b.dataset.k = i; b.onclick = () => { myK = i; buildPreview() }; kindsEl.appendChild(b) });
+document.getElementById('kPrev').onclick = () => { const j = KIND_ORDER.indexOf(myK); myK = KIND_ORDER[(j + KIND_ORDER.length - 1) % KIND_ORDER.length]; buildPreview() };
+document.getElementById('kNext').onclick = () => { const j = KIND_ORDER.indexOf(myK); myK = KIND_ORDER[(j + 1) % KIND_ORDER.length]; buildPreview() };
 COLORS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', '색 ' + (i + 1)); b.setAttribute('aria-pressed', i === myColor); b.onclick = () => { myColor = i;[...sw.children].forEach((x, k) => x.setAttribute('aria-pressed', k === i)); buildPreview() }; sw.appendChild(b) });
 const nickEl = document.getElementById('nickname');
 function showNick() { nickEl.textContent = nickOf(myA, myB); gbNick.placeholder = nickOf(myA, myB) }
