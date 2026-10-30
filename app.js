@@ -417,7 +417,18 @@ let target = null, nearI = 0, nearSince = 0;
 const seen = new Set(store.get('pae-seen', []));
 const plaque = document.getElementById('plaque'), toastEl = document.getElementById('toast');
 function toast(s) { toastEl.textContent = s; toastEl.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove('on'), 2400) }
-function updCount() { document.getElementById('count').textContent = `관람 ${seen.size}/10` }
+function updCount() { document.getElementById('count').textContent = `도장 ${seen.size}/10`; if (!document.getElementById('stamps').hidden) renderStamps() }
+function renderStamps() {
+  const box = document.getElementById('slots'); box.innerHTML = '';
+  for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(document.createTextNode('관람')); r.appendChild(el('b', null, String(i).padStart(2, '0'))) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
+  const d = document.getElementById('stDone'); d.innerHTML = '';
+  if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + nickOf(myA, myB))) }
+  else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
+}
+function openStamps() { renderStamps(); document.getElementById('stamps').hidden = false; document.getElementById('stClose').focus() }
+document.getElementById('count').onclick = openStamps;
+document.getElementById('stClose').onclick = () => { document.getElementById('stamps').hidden = true };
+document.getElementById('stamps').addEventListener('click', e => { if (e.target.id === 'stamps') e.target.hidden = true });
 updCount();
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
 function showPlaque(i, fresh) {
@@ -427,7 +438,7 @@ function showPlaque(i, fresh) {
    <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><a class="btn primary" target="_blank" rel="noopener"></a>
    <button class="btn ghost" data-gb="write">감상평 남기기</button><button class="btn ghost" data-gb="read">감상평 보기 (${cnt})</button></div>
-   ${seen.has(i) ? `<div class="seen${fresh ? ' pop' : ''}">관람함</div>` : ''}`;
+   ${seen.has(i) ? `<div class="seal${fresh ? ' pop' : ''}">관람<b>${String(i).padStart(2, '0')}</b></div>` : ''}`;
   plaque.querySelector('h1').textContent = r.t; plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
   plaque.querySelector('.nowtxt').textContent = VID.on ? '지금 소리: 음플릭스 영상 (윤진 선생님 해설 포함)' : (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
@@ -488,7 +499,7 @@ function renderGB() {
 function openGB(i, write) { GB.cur = i; gbMsg.textContent = ''; gbEl.hidden = false; renderGB(); if (write && GB.ok && i) setTimeout(() => gbText.focus(), 50); else document.getElementById('gbClose').focus() }
 document.getElementById('gbClose').onclick = () => { gbEl.hidden = true };
 gbEl.addEventListener('click', e => { if (e.target === gbEl) gbEl.hidden = true });
-addEventListener('keydown', e => { if (e.key === 'Escape' && !gbEl.hidden) gbEl.hidden = true });
+addEventListener('keydown', e => { if (e.key === 'Escape') { gbEl.hidden = true; document.getElementById('stamps').hidden = true } });
 document.getElementById('openAll').onclick = () => openGB(0, false);
 gbNick.value = store.get('pae-gbnick', ''); gbNick.placeholder = nickOf(myA, myB);
 gbText.addEventListener('input', () => { gbLen.textContent = `${gbText.value.length}/200` });
@@ -620,7 +631,7 @@ function frame(now) {
   let ni = 0, nd = 1e9; for (let i = 1; i <= 10; i++) { const d = pos.distanceTo(PICS[i].front); if (d < nd) { nd = d; ni = i } }
   const near = me && nd < (ni === 10 ? 3.2 : 2.6) ? ni : 0;
   if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
-  if (nearI && !seen.has(nearI) && t - nearSince > 1.5) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); showPlaque(nearI, true); toast(seen.size === 10 ? '열 점을 모두 감상했어요. 관람 완주!' : `관람 ${seen.size}/10 완료`) }
+  if (nearI && !seen.has(nearI) && t - nearSince > 1.5) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); showPlaque(nearI, true); if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
   want = nearI ? KEYS[nearI] : 'promenade';
   if (me) { me.position.set(pos.x, moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI; animateAvatar(me, walkT, moving); sendPresence(false) }
   for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv) }

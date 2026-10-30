@@ -98,11 +98,11 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .g-k{font-size:.74rem;color:#a9a39a;margin-bottom:8px}
 .brand-lock{display:flex;align-items:center;gap:18px;margin-bottom:24px}
 .brand-lock .g-logo{margin:0;height:38px}
-.crew{position:relative;width:200px;height:92px;flex:0 0 auto}
-.crew img{position:absolute;width:84px;height:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45));animation:bob 3.2s ease-in-out infinite}
-.crew .c1{left:0;top:12px;transform:rotate(-12deg);animation-delay:-.4s}
-.crew .c3{left:112px;top:10px;transform:rotate(11deg);animation-delay:-1.2s}
-.crew .c2{left:54px;top:0;width:92px;z-index:2;animation-delay:-2s}
+.crew{display:flex;align-items:flex-end;gap:2px;flex:0 0 auto}
+.crew img{width:66px;height:auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.45));animation:bob 3.2s ease-in-out infinite}
+.crew .c1{rotate:-6deg;animation-delay:-.4s}
+.crew .c3{rotate:6deg;animation-delay:-1.2s}
+.crew .c2{animation-delay:-2s}
 @keyframes bob{50%{translate:0 -4px}}
 #kinds{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;max-width:340px}
 #kinds button{aspect-ratio:1;padding:0;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);border-radius:14px;cursor:pointer;overflow:hidden;transition:transform .15s,border-color .15s}
@@ -111,7 +111,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 #kinds button[aria-pressed="true"]{border:2px solid #f3f1ec;background:rgba(255,255,255,.14)}
 #kindDesc{color:#f3f1ec;font-weight:700}
 @media (prefers-reduced-motion:reduce){.crew img{animation:none}}
-@media (max-width:820px){#kinds{grid-template-columns:repeat(8,1fr);max-width:none;gap:5px}#kinds button{border-radius:9px}.crew{width:118px;height:56px}.crew img{width:50px}.crew .c2{width:54px;left:32px}.crew .c3{left:66px}.brand-lock .g-logo{height:28px}}
+@media (max-width:820px){#kinds{grid-template-columns:repeat(8,1fr);max-width:none;gap:5px}#kinds button{border-radius:9px}.crew{width:118px;height:56px}.crew img{width:50px}.crew .c2{animation-delay:-2s}.crew .c3{rotate:6deg;animation-delay:-1.2s}.brand-lock .g-logo{height:28px}}
 .k-row{display:flex;align-items:center;gap:8px}
 .k-row > button{flex:0 0 auto;width:32px;height:32px;border:1px solid rgba(255,255,255,.3);background:none;color:#f3f1ec;font-size:1.2rem;line-height:1;cursor:pointer;border-radius:50%}
 .k-desc{font-size:.8rem;color:#a9a39a;margin-top:8px;min-height:1.2em}
@@ -129,6 +129,29 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   .g-panel{margin:0}.g-logo{height:26px;margin-bottom:14px}.g-title{font-size:2.6rem;margin:6px 0 8px}.g-sub{margin-bottom:14px;font-size:.9rem}
   .g-sec{padding:10px 0 12px}.g-sec.two{gap:18px}
 }
+
+/* 관람 도장 */
+.seal{position:absolute;right:18px;top:16px;width:64px;height:64px;border-radius:50%;border:3px solid #e30613;color:#e30613;display:grid;place-items:center;text-align:center;
+  font-weight:900;font-size:.68rem;line-height:1.05;transform:rotate(-14deg);opacity:.9;box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #e30613;background:rgba(227,6,19,.04)}
+.seal b{display:block;font-size:1.25rem;letter-spacing:-.03em}
+.seal.pop{animation:stamp .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes stamp{0%{transform:rotate(-14deg) scale(2.6);opacity:0}60%{opacity:1}100%{transform:rotate(-14deg) scale(1)}}
+.label h1,.label .no{padding-right:76px}
+#stamps{position:fixed;inset:0;z-index:31;background:rgba(244,243,240,.92);backdrop-filter:blur(4px);display:grid;place-items:center;
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.board{width:min(640px,100%);background:#fff;box-shadow:0 20px 60px rgba(0,0,0,.12);padding:22px 22px 20px;max-height:100%;overflow:auto}
+.board header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+.board h2{margin:0;font-size:1.35rem;font-weight:800}
+.board .sub{color:var(--sub);font-size:.85rem;margin:0 0 16px}
+.slots{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px 10px}
+.slot{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;min-width:0;background:none;border:0;padding:0;cursor:pointer;font:inherit;color:inherit}
+.slot .ring{width:72px;max-width:100%;aspect-ratio:1;border-radius:50%;border:2px dashed var(--line);display:grid;place-items:center;color:var(--muted);font-weight:800;font-size:1.1rem}
+.slot.on .ring{border:3px solid #e30613;color:#e30613;box-shadow:inset 0 0 0 2px #fff,inset 0 0 0 4px #e30613;transform:rotate(-12deg);font-size:.66rem;line-height:1.05;background:rgba(227,6,19,.04)}
+.slot.on .ring b{display:block;font-size:1.15rem}
+.slot span{font-size:.72rem;color:var(--sub);word-break:keep-all;line-height:1.3}
+.done{margin-top:18px;border-top:2px solid var(--ink);padding-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.done b{font-size:1.05rem}
+@media (max-width:560px){.slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 6px}.slot .ring{width:56px}.slot span{font-size:.64rem}}
 
 /* 감상평 */
 #gb{position:fixed;inset:0;z-index:30;background:rgba(244,243,240,.9);backdrop-filter:blur(4px);display:grid;place-items:center;
@@ -166,7 +189,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   <div class="mark"><img class="logo" src="assets/brand/eumflix-logo.png" alt="음플릭스"><b>전람회의 그림</b><span>온라인 전시</span></div>
   <div class="bar">
     <span class="live" id="people">혼자 관람 중</span>
-    <span id="count">관람 0/10</span>
+    <button id="count" type="button">도장 0/10</button>
     <button id="openAll">감상평</button>
     <button id="sound" aria-pressed="true">소리 끄기</button>
   </div>
@@ -178,6 +201,14 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 <button id="clap" aria-label="박수 보내기">👏 박수</button>
 <div class="hint" id="hint">방향키·WASD로 걷기 · 바닥이나 작품을 누르면 그쪽으로 걸어가요</div>
 <div class="toast" id="toast"></div>
+<div id="stamps" hidden role="dialog" aria-modal="true" aria-labelledby="stTitle">
+  <div class="board">
+    <header><h2 id="stTitle">관람 도장판</h2><button class="x" id="stClose">닫기</button></header>
+    <p class="sub">작품 앞에 잠시 머물면 도장이 찍혀요. 빈칸을 누르면 그 작품 앞으로 걸어가요.</p>
+    <div class="slots" id="slots"></div>
+    <div class="done" id="stDone"></div>
+  </div>
+</div>
 <aside id="vid" hidden aria-label="음플릭스 영상">
   <div class="vid-head"><span id="vidCap">음플릭스 영상</span><button id="vidSize" type="button">크게</button></div>
   <div class="vid-frame"><div id="vidPlayer"></div></div>
@@ -201,7 +232,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   <div class="g-panel">
     <div class="brand-lock">
       <img class="g-logo" src="assets/brand/eumflix-logo.png" alt="음플릭스">
-      <div class="crew" aria-hidden="true"><img class="c1" src="assets/chars/c1.png" alt=""><img class="c3" src="assets/chars/c3.png" alt=""><img class="c2" src="assets/chars/c2.png" alt=""></div>
+      <div class="crew" aria-hidden="true"><img class="c1" src="assets/chars/c1.png" alt=""><img class="c2" src="assets/chars/c2.png" alt=""><img class="c3" src="assets/chars/c3.png" alt=""></div>
     </div>
     <div class="eyebrow">온라인 전시 · 모데스트 무소륵스키, 1874</div>
     <h1 class="g-title">전람회의 그림</h1>
