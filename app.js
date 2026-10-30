@@ -428,6 +428,12 @@ function renderStamps() {
   const d = document.getElementById('stDone'); d.innerHTML = '';
   if (seen.size >= 10) { const qb = el('button', 'qz-main', '🎵 그림 맞히기 퀴즈'); qb.type = 'button'; qb.onclick = () => { document.getElementById('stamps').hidden = true; quizInvite() }; d.appendChild(qb); if (store.get('pae-cert', null)) { const cb2 = el('button', 'qz-ghost', '📜 감상 확인증'); cb2.type = 'button'; cb2.onclick = () => { document.getElementById('stamps').hidden = true; showCert() }; d.appendChild(cb2) } d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))); if (CFG.video && CFG.video.url) { const a = el('a', null, '음플릭스 영상에 감상평 남기러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'font-weight:700;color:#e30613'; d.appendChild(a) } }
   else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
+  // 처음부터 다시 하기 (화면 안에서 한 번 더 확인)
+  const rs = el('button', 'qz-ghost small rs', '처음부터 다시 하기'); rs.type = 'button';
+  rs.onclick = () => { const box = el('div', 'rs-confirm'); box.appendChild(el('span', null, '도장·퀴즈 기록·감상 확인증이 모두 지워져요. 정말 지울까요?')); const y = el('button', 'qz-main', '지우기'); y.type = 'button'; const n = el('button', 'qz-ghost', '취소'); n.type = 'button';
+    y.onclick = () => { ['pae-seen3', 'pae-done', 'pae-cert', 'pae-quiz-best'].forEach(k => { try { localStorage.removeItem(k) } catch (e) { } }); seen.clear(); for (const k in listened) delete listened[k]; updCount(); renderStamps(); if (nearI) showPlaque(nearI, false); toast('기록을 지웠어요. 처음부터 다시 관람해요!') };
+    n.onclick = () => renderStamps(); box.append(y, n); rs.replaceWith(box) };
+  d.appendChild(rs);
 }
 function openStamps() { renderStamps(); document.getElementById('stamps').hidden = false; document.getElementById('stClose').focus() }
 document.getElementById('count').onclick = openStamps;
