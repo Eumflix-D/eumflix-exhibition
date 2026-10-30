@@ -272,20 +272,23 @@ const rail = new THREE.MeshLambertMaterial({ color: '#2a2a2a' });
 const BENCHES = [[0, -12], [0, -30]]; const benchTop = new THREE.MeshLambertMaterial({ color: '#b48a5a' }), benchLeg = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 BENCHES.forEach(([x, z]) => { const t = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, .8), benchTop); t.position.set(x, .46, z); scene.add(t);[-1.4, 1.4].forEach(dx => { const l = new THREE.Mesh(new THREE.BoxGeometry(.12, .42, .7), benchLeg); l.position.set(x + dx, .21, z); scene.add(l) }) });
 // 입구 벽 글씨
-function makeSign(logo) {
+function makeSign(logo, face) {
   return canvasTex(1600, 800, (g, w, h) => {
     g.fillStyle = '#f7f6f3'; g.fillRect(0, 0, w, h); g.fillStyle = '#161616'; g.textAlign = 'left';
     if (logo) { const lh = 64; g.drawImage(logo, 80, 70, lh * logo.naturalWidth / logo.naturalHeight, lh); g.font = '500 34px Pretendard, sans-serif'; g.fillText('온라인 전시', 100 + lh * logo.naturalWidth / logo.naturalHeight, 122) } else { g.font = '500 34px Pretendard, sans-serif'; g.fillText('음플릭스 온라인 전시', 80, 120) }
     g.font = '800 170px Pretendard, sans-serif'; g.fillText('전람회의 그림', 70, 320);
     g.font = '500 44px Pretendard, sans-serif'; g.fillStyle = '#55524c'; g.fillText('모데스트 무소륵스키, 1874', 80, 400);
-    g.fillStyle = '#161616'; g.fillRect(80, 450, 1440, 2);
+    if (face) { const fh = 330, fw = fh * face.naturalWidth / face.naturalHeight, fx = 1520 - fw; g.fillStyle = '#e4e1da'; g.fillRect(fx - 10, 90, fw + 20, fh + 20); g.drawImage(face, fx, 100, fw, fh); g.font = '400 24px Pretendard, sans-serif'; g.fillStyle = '#6b6760'; g.textAlign = 'right'; g.fillText('모데스트 무소륵스키 (1839–1881)', 1520, 445 + 0); g.textAlign = 'left' }
+    g.fillStyle = '#161616'; g.fillRect(80, face ? 465 : 450, 1440, 2);
     g.font = '400 36px Pretendard, sans-serif'; g.fillStyle = '#33312d';
     ['1873년, 화가 빅토르 하르트만이 서른아홉에 세상을 떠났습니다. 이듬해 열린 유작전에서', '무소륵스키는 그림 열 점을 골라 피아노 모음곡으로 옮겼습니다. 그림 사이를 걷는', '발걸음은 〈프롬나드〉가 되었습니다. 전시실 안쪽으로 걸어 들어가 보세요.'].forEach((s, i) => g.fillText(s, 80, 530 + i * 58))
   })
 }
 const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshBasicMaterial({ map: makeSign() })); signMesh.position.set(0, 2.7, -.03); signMesh.rotation.y = Math.PI; scene.add(signMesh);
 const LOGO_SRC = CFG.logo || 'assets/brand/eumflix-logo.png';
-{ const li = new Image(); li.onload = () => { signMesh.material.map = makeSign(li); signMesh.material.needsUpdate = true }; li.src = LOGO_SRC }
+{ let L = null, F = null; const redraw = () => { signMesh.material.map = makeSign(L, F); signMesh.material.needsUpdate = true };
+  const li = new Image(); li.onload = () => { L = li; redraw() }; li.src = LOGO_SRC;
+  if (CFG.portrait) { const fi = new Image(); fi.onload = () => { F = fi; redraw() }; fi.src = CFG.portrait } }
 
 /* 그림 걸기 */
 const PICS = [null];
@@ -392,8 +395,9 @@ function makeAvatar(color, name, mine, kind, parent) {
   const tag = nameTag(name, mine); tag.position.y = 2.2; g.add(tag);
   g.userData = { body, head, tag, arms, legs, kind }; P.add(g); return g;
 }
-function animateAvatar(g, ph, mv) {
+function animateAvatar(g, ph, mv, sit) {
   const u = g.userData, s = mv && !RM ? Math.sin(ph) : 0, now = performance.now() / 1000;
+  if (sit) { u.legs[0].rotation.x = u.legs[1].rotation.x = -1.45; u.arms[0].rotation.x = u.arms[1].rotation.x = -.7; u.body.position.y = .62 + Math.sin(now * 1.6) * .01; u.head.position.y = 1.36 + Math.sin(now * 1.6 + .4) * .014; u.head.rotation.z = Math.sin(now * .7) * .06; return }
   u.legs[0].rotation.x = s * .6; u.legs[1].rotation.x = -s * .6;
   u.arms[0].rotation.x = -s * .7; u.arms[1].rotation.x = s * .7;
   u.body.position.y = .62 + (mv && !RM ? Math.abs(s) * .05 : Math.sin(now * 2) * .008);
@@ -420,7 +424,7 @@ function toast(s) { toastEl.textContent = s; toastEl.classList.add('on'); clearT
 function updCount() { document.getElementById('count').textContent = `도장 ${seen.size}/10`; if (!document.getElementById('stamps').hidden) renderStamps() }
 function renderStamps() {
   const box = document.getElementById('slots'); box.innerHTML = '';
-  for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(document.createTextNode('관람')); r.appendChild(el('b', null, String(i).padStart(2, '0'))) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
+  for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(el('b', null, String(i).padStart(2, '0'))); r.appendChild(document.createTextNode('관람 완료!')) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
   const d = document.getElementById('stDone'); d.innerHTML = '';
   if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + nickOf(myA, myB))) }
   else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
@@ -431,6 +435,13 @@ document.getElementById('stClose').onclick = () => { document.getElementById('st
 document.getElementById('stamps').addEventListener('click', e => { if (e.target.id === 'stamps') e.target.hidden = true });
 updCount();
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
+const LISTEN = 30, listened = {};
+const C36 = 2 * Math.PI * 36;
+function sealHTML(i) {
+  const nn = String(i).padStart(2, '0'), done = seen.has(i), p = Math.min(1, (listened[i] || 0) / LISTEN);
+  return `<div class="seal ${done ? 'done' : 'wait'}" id="seal"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="trk" cx="40" cy="40" r="36"/><circle class="prg" cx="40" cy="40" r="36" style="stroke-dasharray:${C36};stroke-dashoffset:${C36 * (1 - p)}"/></svg>
+    <span class="st">${done ? `관람<b>완료!</b>` : `관람<b>${nn}</b><i>30초 듣기</i>`}</span></div>`
+}
 function showPlaque(i, fresh) {
   if (!i) { plaque.classList.remove('on'); return }
   const r = ROOMS[i], link = listenLink(i), cnt = (GB.byPic[i] || []).length;
@@ -438,7 +449,7 @@ function showPlaque(i, fresh) {
    <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><a class="btn primary" target="_blank" rel="noopener"></a>
    <button class="btn ghost" data-gb="write">감상평 남기기</button><button class="btn ghost" data-gb="read">감상평 보기 (${cnt})</button></div>
-   ${seen.has(i) ? `<div class="seal${fresh ? ' pop' : ''}">관람<b>${String(i).padStart(2, '0')}</b></div>` : ''}`;
+   ${sealHTML(i)}`;
   plaque.querySelector('h1').textContent = r.t; plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
   plaque.querySelector('.nowtxt').textContent = VID.on ? '지금 소리: 음플릭스 영상 (윤진 선생님 해설 포함)' : (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
@@ -526,7 +537,7 @@ function upsertPeer(key, v) {
   const c = Math.abs(v.c | 0) % COLORS.length, a = Math.abs(v.a | 0) % 16, b = Math.abs(v.b | 0) % 16, kd = Math.abs(v.k | 0) % KINDS.length, name = nickOf(a, b);
   let o = others.get(key);
   if (!o || o.c !== c || o.name !== name || o.kd !== kd) { if (o) scene.remove(o.g); o = { g: makeAvatar(COLORS[c], name, false, kd), c, kd, name, cur: new THREE.Vector3(v.x, 0, v.z), r: +v.r || 0, cl: v.cl || 0 }; others.set(key, o) }
-  o.tx = Math.max(-W2, Math.min(W2, v.x)); o.tz = Math.max(-LEN, Math.min(0, v.z)); o.tr = +v.r || 0; o.mv = !!v.mv; o.t = +v.t || 0; o.on = true;
+  o.tx = Math.max(-W2, Math.min(W2, v.x)); o.tz = Math.max(-LEN, Math.min(0, v.z)); o.tr = +v.r || 0; o.mv = !!v.mv; o.st = !!v.st; o.t = +v.t || 0; o.on = true;
   if (v.cl && v.cl !== o.cl) { o.cl = v.cl; if (Date.now() + serverOffset - v.cl < 5000) clapAt(o.g) }
   updPeople()
 }
@@ -553,7 +564,7 @@ async function startTogether() {
 let lastSent = 0, lastClap = 0;
 function sendPresence(force) {
   if (!myRef || !me) return; const now = performance.now(); if (!force && (!moving || now - lastSent < 280)) return; lastSent = now;
-  const d = { x: +pos.x.toFixed(2), z: +pos.z.toFixed(2), r: +heading.toFixed(2), c: myColor, a: myA, b: myB, k: myK, mv: !!moving, t: firebase.database.ServerValue.TIMESTAMP };
+  const d = { x: +pos.x.toFixed(2), z: +pos.z.toFixed(2), r: +heading.toFixed(2), c: myColor, a: myA, b: myB, k: myK, st: !!seated, mv: !!moving, t: firebase.database.ServerValue.TIMESTAMP };
   if (lastClap) d.cl = lastClap; myRef.set(d).catch(() => { })
 }
 let wasMoving = false;
@@ -589,6 +600,7 @@ const mapXY = (x, z) => [20 + (-z / LEN) * 360, 64 + (x / W2) * 50];
 mini.addEventListener('click', e => { const r = mini.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * 400, my = (e.clientY - r.top) / r.height * 128; let best = 0, bd = 1e9; for (let i = 1; i <= 10; i++) { const p = PICS[i].center, [px, py] = mapXY(p.x, p.z), d = Math.hypot(px - mx, py - my); if (d < bd) { bd = d; best = i } } if (bd < 60) target = PICS[best].front.clone() });
 
 /* 입장: 어두운 전시실 입구에서 캐릭터 고르기 */
+if (CFG.portrait) { const pb = document.getElementById('portraitBox'); pb.querySelector('img').src = CFG.portrait; pb.hidden = false }
 const sw = document.getElementById('sw'), kindsEl = document.getElementById('kinds'), kindDesc = document.getElementById('kindDesc');
 const PREV = new THREE.Vector3(0, 0, -5.2);
 function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].n;[...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
@@ -608,6 +620,17 @@ document.getElementById('enter').onclick = () => {
 };
 const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
 
+/* ================= 벤치에 앉기 ================= */
+let seated = null;
+const SEATS = []; BENCHES.forEach(([bx, bz]) => [-1.05, 0, 1.05].forEach(ox => [1, -1].forEach(side => SEATS.push({ x: bx + ox, z: bz + side * .12, face: side }))));
+const sitBtn = document.getElementById('sit');
+function nearSeat() { let best = null, bd = 1.7; for (const st of SEATS) { const d = Math.hypot(pos.x - st.x, pos.z - (st.z + st.face * .6)); if (d < bd) { bd = d; best = st } } return best }
+function sitDown(st) { seated = st; target = null; pos.set(st.x, 0, st.z); heading = st.face > 0 ? 0 : Math.PI; camYaw = st.face > 0 ? Math.PI : 0; sendPresence(true); updSit() }
+function standUp() { if (!seated) return; pos.set(seated.x, 0, seated.z + seated.face * .95); seated = null; sendPresence(true); updSit() }
+function updSit() { const st = seated ? null : (me && !nearI ? nearSeat() : null); sitBtn.hidden = !(seated || st); sitBtn.textContent = seated ? '일어나기' : '🪑 앉기'; sitBtn.dataset.on = seated ? 1 : 0 }
+sitBtn.onclick = () => { if (seated) standUp(); else { const st = nearSeat(); if (st) sitDown(st) } };
+addEventListener('keydown', e => { if (!me || /INPUT|TEXTAREA/.test(e.target.tagName) || !gbEl.hidden) return; if (e.key === 'e' || e.key === 'E' || e.key === ' ') { e.preventDefault(); sitBtn.onclick() } });
+
 /* ================= 루프 ================= */
 const angLerp = (a, b, k) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * k };
 function collide(p) {
@@ -625,16 +648,19 @@ function frame(now) {
   const f = { x: -Math.sin(camYaw), z: -Math.cos(camYaw) }, r = { x: Math.cos(camYaw), z: -Math.sin(camYaw) };
   let mx = f.x * fwd + r.x * side, mz = f.z * fwd + r.z * side;
   if (target && !fwd && !side) { const dx = target.x - pos.x, dz = target.z - pos.z, d = Math.hypot(dx, dz); if (d < .15) target = null; else { mx = dx / d * Math.min(1, d); mz = dz / d * Math.min(1, d) } }
+  if (seated && (fwd || side || target)) { const tg = target; standUp(); target = tg }
+  if (seated) { mx = mz = 0 }
   const mm = Math.hypot(mx, mz); moving = !!me && mm > .05;
   if (moving) { const sp = 4.2 * Math.min(1, mm); pos.x += mx / mm * sp * dt; pos.z += mz / mm * sp * dt; collide(pos); heading = angLerp(heading, Math.atan2(mx, mz), 1 - Math.exp(-10 * dt)); camYaw = angLerp(camYaw, Math.atan2(-mx, -mz), 1 - Math.exp(-(fwd || side ? 1.2 : 2.5) * dt)); walkT += dt * 9 }
   if (wasMoving && !moving) sendPresence(true); wasMoving = moving;
   let ni = 0, nd = 1e9; for (let i = 1; i <= 10; i++) { const d = pos.distanceTo(PICS[i].front); if (d < nd) { nd = d; ni = i } }
   const near = me && nd < (ni === 10 ? 3.2 : 2.6) ? ni : 0;
   if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
-  if (nearI && !seen.has(nearI) && t - nearSince > 1.5) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); showPlaque(nearI, true); if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
+  if (nearI && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / LISTEN)) }
+  if (nearI && !seen.has(nearI) && listened[nearI] >= LISTEN) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
   want = nearI ? KEYS[nearI] : 'promenade';
-  if (me) { me.position.set(pos.x, moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI; animateAvatar(me, walkT, moving); sendPresence(false) }
-  for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv) }
+  if (me) { me.position.set(pos.x, seated ? .3 : moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI && !seated; animateAvatar(me, walkT, moving, !!seated); sendPresence(false); if ((t * 4 | 0) !== updSit.k) { updSit.k = t * 4 | 0; updSit() } }
+  for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.st ? .3 : o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv, o.st) }
   for (let k = claps.length - 1; k >= 0; k--) { const c = claps[k], a = (now - c.t0) / 1400; c.s.position.y = 2.7 + a * .8; c.s.material.opacity = 1 - a; if (a >= 1) { c.g.remove(c.s); claps.splice(k, 1) } }
   if (me && lit < 1) lit = Math.min(1, lit + dt / 1.8);
   { const e = lit * lit * (3 - 2 * lit); hemi.intensity = .12 + .83 * e; sun.intensity = .05 + .3 * e; spot.intensity = 2.6 * (1 - e); scene.background.copy(DARK).lerp(BRIGHT, e); scene.fog.color.copy(scene.background); scene.fog.near = 6 + 22 * e; scene.fog.far = 26 + 34 * e }
@@ -642,6 +668,7 @@ function frame(now) {
   let cp, cl;
   if (!me) { const a = RM ? 0 : Math.sin(t * .25) * .35; cp = new THREE.Vector3(PREV.x + Math.sin(a) * 3.6, 1.75, PREV.z + Math.cos(a) * 3.6); cl = new THREE.Vector3(PREV.x, 1.15, PREV.z) }
   else if (nearI) { const p = PICS[nearI], back = (nearI === 10 ? 7.2 : 5.2) * (camera.aspect < 1 ? 1.45 : 1); cp = p.center.clone().addScaledVector(p.n, back).setY(2.6); cl = p.center.clone().setY(p.center.y - (camera.aspect < 1 ? 1.2 : .55)) }
+  else if (seated) { const f = seated.face; cp = new THREE.Vector3(pos.x + 1.8, 3.1, pos.z - f * 4.6); cl = new THREE.Vector3(pos.x, 1.2, pos.z + f * 6) }
   else { cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * 5.4, 3.3, pos.z + Math.cos(camYaw) * 5.4); cl = new THREE.Vector3(pos.x, 1.3, pos.z) }
   cp.x = Math.max(-W2 + .4, Math.min(W2 - .4, cp.x)); cp.z = Math.max(-LEN + .4, Math.min(-.3, cp.z));
   const k = 1 - Math.exp(-3.2 * dt); camPos.lerp(cp, k); camLook.lerp(cl, k); camera.position.copy(camPos); camera.lookAt(camLook);
