@@ -171,6 +171,36 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .done b{font-size:1.05rem}
 @media (max-width:560px){.slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 6px}.slot .ring{width:56px}.slot span{font-size:.64rem}}
 
+/* 완주 퀴즈 */
+#quiz{position:fixed;inset:0;z-index:45;background:rgba(14,13,12,.7);backdrop-filter:blur(4px);display:grid;place-items:center;
+  padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.qz-card{position:relative;width:min(640px,100%);max-height:100%;overflow:auto;background:#fff;padding:26px 24px 22px;box-shadow:0 24px 70px rgba(0,0,0,.35);text-align:center}
+.qz-x{position:absolute;right:12px;top:10px;background:none;border:0;font-size:1.1rem;cursor:pointer;color:var(--sub)}
+.qz-badge{font-size:2.6rem;line-height:1}
+.qz-card h2{font-size:1.3rem;font-weight:800;margin:10px 0 6px;text-wrap:balance}
+.qz-sub{color:var(--sub);margin:0 auto 18px;max-width:40ch}
+.qz-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.qz-main{background:var(--ink);color:#fff;border:0;padding:12px 22px;font-weight:800;font-size:.95rem;cursor:pointer;text-decoration:none;display:inline-block}
+.qz-ghost{background:#fff;color:var(--ink);border:1px solid var(--ink);padding:11px 18px;font-weight:700;font-size:.9rem;cursor:pointer}
+.qz-ghost.small{padding:6px 12px;font-size:.8rem;margin-bottom:12px}
+.qz-head{display:flex;justify-content:space-between;font-size:.82rem;color:var(--sub);font-weight:700}
+.qz-score{color:#e30613}
+.qz-prog{height:4px;background:var(--line);margin:8px 0 14px}.qz-prog i{display:block;height:100%;background:#e30613;transition:width .3s}
+.qz-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.qz-opt{position:relative;padding:0;border:3px solid transparent;background:#f4f3f0;cursor:pointer;aspect-ratio:4/3;overflow:hidden}
+.qz-opt img{width:100%;height:100%;object-fit:cover;display:block}
+.qz-opt:hover:not(:disabled){border-color:var(--ink)}
+.qz-opt.right{border-color:#1f9d55}.qz-opt.wrong{border-color:#e30613;opacity:.75}
+.qz-cap{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);color:#fff;font-size:.78rem;font-weight:700;padding:4px 6px}
+.qz-cap:empty{display:none}
+.qz-fb{min-height:1.4em;font-weight:800;margin:12px 0 0}.qz-fb.ok{color:#1f9d55}.qz-fb.no{color:#e30613}
+.qz-kicker{font-size:.82rem;color:var(--sub);font-weight:700}
+.qz-big{margin:6px 0}.qz-big b{font-size:4.2rem;font-weight:900;color:#e30613;letter-spacing:-.04em}.qz-big span{font-size:1.4rem;font-weight:800;color:var(--sub)}
+.qz-list{list-style:none;padding:0;margin:0 auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 16px;max-width:440px;text-align:left;font-size:.84rem}
+.qz-list li{display:flex;gap:8px}.qz-list li.ok span:first-child{color:#1f9d55;font-weight:900}.qz-list li.no span:first-child{color:#e30613;font-weight:900}
+.done .qz-main{padding:8px 14px;font-size:.85rem}
+@media (max-width:560px){.qz-card{padding:22px 14px 16px}.qz-grid{gap:6px}.qz-list{grid-template-columns:1fr}}
+
 /* 그림 크게 보기 */
 #viewer{position:fixed;inset:0;z-index:40;background:rgba(14,13,12,.94);display:flex;flex-direction:column}
 .v-stage{flex:1 1 auto;min-height:0;display:grid;place-items:center;overflow:hidden;padding:max(16px,env(safe-area-inset-top,0px)) 16px 8px}
@@ -241,6 +271,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 <button id="sit" type="button" hidden>🪑 앉기</button>
 <div class="hint" id="hint">WASD 이동 · 마우스로 끌어서 시점 돌리기(Q/E) · 바닥 클릭으로 걷기 · 벤치에서 F로 앉기</div>
 <div class="toast" id="toast"></div>
+<div id="quiz" hidden role="dialog" aria-modal="true" aria-label="그림 맞히기 퀴즈">
+  <div class="qz-card"><button class="qz-x" id="qzClose" type="button" aria-label="퀴즈 닫기">✕</button><div id="qzBody"></div></div>
+</div>
 <div id="viewer" hidden role="dialog" aria-modal="true" aria-label="그림 크게 보기">
   <div class="v-stage"><img alt=""></div>
   <div class="v-bar"><div><b class="v-no"></b> <span class="v-t"></span> <i class="v-o"></i></div><span class="v-help">두 번 누르거나 휠·두 손가락으로 확대 · 끌어서 이동</span><button id="vClose" type="button">닫기 ✕</button></div>

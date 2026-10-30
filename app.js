@@ -426,7 +426,7 @@ function renderStamps() {
   const box = document.getElementById('slots'); box.innerHTML = '';
   for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(el('b', null, String(i).padStart(2, '0'))); r.appendChild(document.createTextNode('관람 완료!')) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
   const d = document.getElementById('stDone'); d.innerHTML = '';
-  if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))); if (CFG.video && CFG.video.url) { const a = el('a', null, '음플릭스 영상에 감상평 남기러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'font-weight:700;color:#e30613'; d.appendChild(a) } }
+  if (seen.size >= 10) { const qb = el('button', 'qz-main', '🎵 그림 맞히기 퀴즈'); qb.type = 'button'; qb.onclick = () => { document.getElementById('stamps').hidden = true; quizInvite() }; d.appendChild(qb); d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))); if (CFG.video && CFG.video.url) { const a = el('a', null, '음플릭스 영상에 감상평 남기러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'font-weight:700;color:#e30613'; d.appendChild(a) } }
   else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
 }
 function openStamps() { renderStamps(); document.getElementById('stamps').hidden = false; document.getElementById('stClose').focus() }
@@ -512,7 +512,7 @@ function renderGB() {
 function openGB(i, write) { GB.cur = i; gbMsg.textContent = ''; gbEl.hidden = false; renderGB(); if (write && GB.ok && i) setTimeout(() => gbText.focus(), 50); else document.getElementById('gbClose').focus() }
 document.getElementById('gbClose').onclick = () => { gbEl.hidden = true };
 gbEl.addEventListener('click', e => { if (e.target === gbEl) gbEl.hidden = true });
-addEventListener('keydown', e => { if (e.key === 'Escape') { gbEl.hidden = true; document.getElementById('stamps').hidden = true; closeViewer() } });
+addEventListener('keydown', e => { if (e.key === 'Escape') { gbEl.hidden = true; document.getElementById('stamps').hidden = true; closeViewer(); if (!qzEl.hidden) closeQuiz() } });
 /* ================= 그림 크게 보기 ================= */
 const viewer = document.getElementById('viewer'), vImg = viewer.querySelector('img'); let vz = { s: 1, x: 0, y: 0 }, vDrag = null, vI = 0;
 function vApply() { vImg.style.transform = `translate(${vz.x}px, ${vz.y}px) scale(${vz.s})` }
@@ -595,7 +595,7 @@ document.getElementById('clap').onclick = () => { if (!me) return; const now = D
 
 /* 입력 */
 const keys = {};
-addEventListener('keydown', e => { if (/INPUT|TEXTAREA/.test(e.target.tagName) || !gbEl.hidden) return; keys[e.key.toLowerCase()] = true; if (e.key.startsWith('Arrow')) e.preventDefault(); target = null });
+addEventListener('keydown', e => { if (/INPUT|TEXTAREA/.test(e.target.tagName) || !gbEl.hidden || !qzEl.hidden) return; keys[e.key.toLowerCase()] = true; if (e.key.startsWith('Arrow')) e.preventDefault(); target = null });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false });
 addEventListener('blur', () => { for (const k in keys) keys[k] = false });
 if (matchMedia('(pointer:coarse)').matches) document.body.classList.add('coarse');
@@ -653,6 +653,58 @@ document.getElementById('enter').onclick = () => {
 };
 const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
 
+/* ================= 완주 퀴즈: 음악 듣고 어떤 그림인지 맞히기 ================= */
+const QZ = { open: false, key: null, list: [], at: 0, score: 0, answers: [] };
+const qzEl = document.getElementById('quiz'), qzBody = document.getElementById('qzBody');
+function picSrc(i) { const P = PICS[i]; return P.real && CFG.images && CFG.images[i] ? CFG.images[i] : P.ctx.canvas.toDataURL('image/jpeg', .8) }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]] } return a }
+function restartTrack() { if (ac && QZ.key) { initAudio(); ac.resume(); startTrack(QZ.key) } }
+function quizInvite() {
+  qzBody.innerHTML = ''; QZ.open = false; QZ.key = null;
+  qzBody.appendChild(el('div', 'qz-badge', '🎉'));
+  qzBody.appendChild(el('h2', null, '도장 10개를 모두 모았어요!'));
+  qzBody.appendChild(el('p', 'qz-sub', '이제 음악만 듣고 어떤 그림인지 맞혀 볼까요? 열 곡이 나와요.'));
+  const row = el('div', 'qz-row'); const go = el('button', 'qz-main', '퀴즈 시작하기'); go.type = 'button'; go.onclick = startQuiz; const later = el('button', 'qz-ghost', '나중에 할게요'); later.type = 'button'; later.onclick = closeQuiz; row.append(go, later); qzBody.appendChild(row);
+  qzEl.hidden = false; go.focus()
+}
+function startQuiz() { QZ.list = shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]); QZ.at = 0; QZ.score = 0; QZ.answers = []; QZ.open = true; initAudio(); if (ac) ac.resume(); if (!soundOn) document.getElementById('sound').click(); showQ() }
+function showQ() {
+  const i = QZ.list[QZ.at]; QZ.key = KEYS[i]; restartTrack();
+  const opts = shuffle([i, ...shuffle([1, 2, 3, 4, 5, 6, 7, 8, 9, 10].filter(x => x !== i)).slice(0, 3)]);
+  qzBody.innerHTML = '';
+  const head = el('div', 'qz-head'); head.appendChild(el('span', null, `${QZ.at + 1} / 10`)); head.appendChild(el('span', 'qz-score', `점수 ${QZ.score}`)); qzBody.appendChild(head);
+  const bar = el('div', 'qz-prog'); const fill = el('i'); fill.style.width = (QZ.at / 10 * 100) + '%'; bar.appendChild(fill); qzBody.appendChild(bar);
+  qzBody.appendChild(el('h2', null, '♪ 지금 들리는 음악은 어떤 그림일까요?'));
+  const again = el('button', 'qz-ghost small', '🔁 처음부터 다시 듣기'); again.type = 'button'; again.onclick = restartTrack; qzBody.appendChild(again);
+  const grid = el('div', 'qz-grid');
+  opts.forEach(o => { const b = el('button', 'qz-opt'); b.type = 'button'; b.dataset.k = o; const im = document.createElement('img'); im.src = picSrc(o); im.alt = '보기 그림'; b.appendChild(im); b.appendChild(el('span', 'qz-cap', '')); b.onclick = () => answer(o, i, grid); grid.appendChild(b) });
+  qzBody.appendChild(grid);
+  qzBody.appendChild(el('p', 'qz-fb', ''));
+}
+function answer(pick, right, grid) {
+  if (grid.dataset.done) return; grid.dataset.done = 1; const ok = pick === right; if (ok) QZ.score++; QZ.answers.push({ i: right, ok });
+  [...grid.children].forEach(b => { const k = +b.dataset.k; b.disabled = true; b.querySelector('.qz-cap').textContent = ROOMS[k].t; if (k === right) b.classList.add('right'); else if (k === pick) b.classList.add('wrong') });
+  const fb = qzBody.querySelector('.qz-fb'); fb.textContent = ok ? `정답! 〈${ROOMS[right].t}〉예요.` : `아쉬워요. 정답은 〈${ROOMS[right].t}〉예요.`; fb.className = 'qz-fb ' + (ok ? 'ok' : 'no');
+  qzBody.querySelector('.qz-score').textContent = `점수 ${QZ.score}`;
+  const nx = el('button', 'qz-main', QZ.at === 9 ? '결과 보기' : '다음 문제 →'); nx.type = 'button'; nx.onclick = () => { QZ.at++; if (QZ.at >= 10) showResult(); else showQ() }; qzBody.appendChild(nx); nx.focus()
+}
+function showResult() {
+  QZ.key = 'gate'; restartTrack(); const sc = QZ.score; store.set('pae-quiz-best', Math.max(sc, store.get('pae-quiz-best', 0)));
+  const msg = sc === 10 ? '완벽해요! 무소륵스키도 깜짝 놀랄 귀예요.' : sc >= 8 ? '대단해요! 그림과 음악이 귀에 쏙 들어왔네요.' : sc >= 5 ? '잘했어요! 헷갈린 곡은 한 번 더 들어 보세요.' : '괜찮아요! 전시실을 한 바퀴 더 돌고 다시 도전해 봐요.';
+  qzBody.innerHTML = '';
+  qzBody.appendChild(el('div', 'qz-kicker', `${myName || nickOf(myA, myB)}의 감상 퀴즈 결과`));
+  const big = el('div', 'qz-big'); big.appendChild(el('b', null, String(sc))); big.appendChild(el('span', null, ' / 10')); qzBody.appendChild(big);
+  qzBody.appendChild(el('p', 'qz-sub', msg));
+  const ul = el('ul', 'qz-list'); QZ.answers.forEach(a => { const li = el('li', a.ok ? 'ok' : 'no'); li.appendChild(el('span', null, a.ok ? '○' : '✕')); li.appendChild(el('span', null, `${String(a.i).padStart(2, '0')} ${ROOMS[a.i].t}`)); ul.appendChild(li) }); qzBody.appendChild(ul);
+  const row = el('div', 'qz-row');
+  if (CFG.video && CFG.video.url) { const a = el('a', 'qz-main', '음플릭스에 감상평 달러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; row.appendChild(a) }
+  const re = el('button', 'qz-ghost', '다시 도전'); re.type = 'button'; re.onclick = startQuiz; const bk = el('button', 'qz-ghost', '전시실로 돌아가기'); bk.type = 'button'; bk.onclick = closeQuiz; row.append(re, bk); qzBody.appendChild(row);
+  QZ.done = true
+}
+function closeQuiz() { qzEl.hidden = true; QZ.open = false; QZ.key = null }
+document.getElementById('qzClose').onclick = closeQuiz;
+qzEl.addEventListener('click', e => { if (e.target === qzEl) closeQuiz() });
+
 /* ================= 벤치에 앉기 ================= */
 let seated = null;
 const SEATS = []; BENCHES.forEach(([bx, bz]) => [-1.05, 0, 1.05].forEach(ox => [1, -1].forEach(side => SEATS.push({ x: bx + ox, z: bz + side * .12, face: side }))));
@@ -672,7 +724,7 @@ function collide(p) {
 }
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; if (!me) { if (w > 820) camera.setViewOffset(w, h, -w * .2, 0, w, h); else camera.setViewOffset(w, h, 0, h * .22, w, h) } camera.updateProjectionMatrix() }
 addEventListener('resize', resize); resize();
-const VO = { x: 0, y: 0 };
+const VO = { x: 0, y: 0 }, detour = { d: 0, t: 0 };
 const camPos = new THREE.Vector3(0, 3.2, 2), camLook = new THREE.Vector3(0, 1.4, -4); let last = performance.now(), picClock = 0;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; const t = now / 1000;
@@ -686,7 +738,10 @@ function frame(now) {
   if (seated && (fwd || side || target)) { const tg = target; standUp(); target = tg }
   if (seated) { mx = mz = 0 }
   const mm = Math.hypot(mx, mz); moving = !!me && mm > .05;
-  if (moving) { const sp = 4.2 * Math.min(1, mm); pos.x += mx / mm * sp * dt; pos.z += mz / mm * sp * dt; collide(pos); heading = angLerp(heading, Math.atan2(mx, mz), 1 - Math.exp(-10 * dt));
+  if (moving) { const sp = 4.2 * Math.min(1, mm), ox = pos.x, oz = pos.z; pos.x += mx / mm * sp * dt; pos.z += mz / mm * sp * dt; collide(pos);
+    if (target && Math.hypot(pos.x - ox, pos.z - oz) < sp * dt * .35) { if (!detour.d) detour.d = pos.x >= 0 ? 1 : -1; detour.t = t } // 벤치에 막히면 한쪽으로 돌아가기
+    if (target && detour.d && t - detour.t < .6) { pos.x += detour.d * sp * dt; collide(pos) } else detour.d = 0;
+    heading = angLerp(heading, Math.atan2(mx, mz), 1 - Math.exp(-10 * dt));
     if (target && !fwd && !side && performance.now() - dragYawT > 1500) camYaw = angLerp(camYaw, Math.atan2(-mx, -mz), 1 - Math.exp(-1.6 * dt)); walkT += dt * 9 }
   if (wasMoving && !moving) sendPresence(true); wasMoving = moving;
   let near = 0;
@@ -696,11 +751,11 @@ function frame(now) {
   }
   if (near !== nearI) { if (nearI && !seen.has(nearI)) listened[nearI] = 0; nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
   // 그 작품의 음악이 실제로 흘러나오는 동안만 30초를 셉니다 (소리 꺼짐·불러오는 중·다른 곡이면 멈춤)
-  const hearing = nearI && soundOn && ac && ac.state === 'running' && playing && playing.name === KEYS[nearI] && !bufLoading.has(KEYS[nearI]) && (playing.real || !(CFG.audio && CFG.audio[nearI]) || bufFail.has(KEYS[nearI]));
+  const hearing = !QZ.open && nearI && soundOn && ac && ac.state === 'running' && playing && playing.name === KEYS[nearI] && !bufLoading.has(KEYS[nearI]) && (playing.real || !(CFG.audio && CFG.audio[nearI]) || bufFail.has(KEYS[nearI]));
   { const sl = document.getElementById('seal'), hi = sl && sl.querySelector('.st i'); if (hi) { const want2 = !soundOn ? '소리를 켜 주세요' : hearing ? `${Math.max(0, Math.ceil(needSec(nearI) - (listened[nearI] || 0)))}초 남음` : '음악 준비 중'; if (hi.textContent !== want2) hi.textContent = want2 } }
   if (hearing && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / needSec(nearI))) }
-  if (nearI && !seen.has(nearI) && playing && playing.real && listened[nearI] >= needSec(nearI)) { seen.add(nearI); store.set('pae-seen3', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
-  want = nearI ? KEYS[nearI] : 'promenade';
+  if (nearI && !seen.has(nearI) && playing && playing.real && listened[nearI] >= needSec(nearI)) { seen.add(nearI); store.set('pae-seen3', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(quizInvite, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
+  want = QZ.open && QZ.key ? QZ.key : nearI ? KEYS[nearI] : 'promenade';
   if (me) { me.position.set(pos.x, seated ? .3 : moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI && !seated; { const ft = nearI ? .12 : 1, u = me.userData; if (Math.abs(u.fade - ft) > .005) { u.fade += (ft - u.fade) * Math.min(1, dt * 6); me.traverse(o => { if (o.isMesh && o.material) { o.material.opacity = (o.material.userData.base ?? (o.material.userData.base = o.material.opacity)) * u.fade; o.material.depthWrite = u.fade > .9 } }) } } animateAvatar(me, walkT, moving, !!seated); sendPresence(false); if ((t * 4 | 0) !== updSit.k) { updSit.k = t * 4 | 0; updSit() } }
   for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.st ? .3 : o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv, o.st) }
   for (let k = claps.length - 1; k >= 0; k--) { const c = claps[k], a = (now - c.t0) / 1400; c.s.position.y = 2.7 + a * .8; c.s.material.opacity = 1 - a; if (a >= 1) { c.g.remove(c.s); claps.splice(k, 1) } }
