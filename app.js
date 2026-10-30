@@ -196,6 +196,7 @@ function tick() {
   if (!ac) return;
   if (!playing || playing.name !== want) startTrack(want);
   else if (!playing.real && bufCache.has(want)) startTrack(want);
+  if (!playing.real && bufLoading.has(playing.name)) return; // 음원 불러오는 중에는 조용히 기다리기
   if (!playing.real) { const p = BUILT[playing.name]; while (playing.next < ac.currentTime + .6) { const t0 = playing.next; p.ev.forEach(([t, v, n, d, g]) => play(playing.g, v, t0 + t, n, d, g)); playing.next += p.len } }
 }
 
