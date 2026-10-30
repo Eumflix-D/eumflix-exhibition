@@ -310,7 +310,7 @@ function hang(i) {
   const lb = new THREE.Mesh(new THREE.PlaneGeometry(.68, .4), new THREE.MeshBasicMaterial({ map: lab })); lb.position.set(w / 2 + .62, 1.5 - y + .0, .02); grp.add(lb);
   // 감상평 메모판 (그림 왼쪽 벽)
   const notes = new THREE.Group(); notes.position.set(-(w / 2 + 1.05), .1, .03); grp.add(notes);
-  const P = { i, ctx: g, tex, pic, fr, grp, lb, notes, real: false, front: new THREE.Vector3(x + nx * 2.4 - nz * 1.1, 0, z + nz * (i === 10 ? 3.4 : 2.4) + nx * 1.1), n: new THREE.Vector3(nx, 0, nz), center: new THREE.Vector3(x, y, z), w, h, maxW: w, maxH: h };
+  const P = { i, ctx: g, tex, pic, fr, grp, lb, notes, real: false, front: new THREE.Vector3(x + nx * 2.4, 0, z + nz * (i === 10 ? 3.4 : 2.4)), n: new THREE.Vector3(nx, 0, nz), center: new THREE.Vector3(x, y, z), w, h, maxW: w, maxH: h };
   PICS.push(P);
   // 선생님 그림 파일이 있으면 바꿔 끼우기
   const src = (CFG.images || {})[i];
@@ -449,12 +449,13 @@ function showPlaque(i, fresh) {
   const r = ROOMS[i], link = listenLink(i), cnt = (GB.byPic[i] || []).length;
   plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p><button class="lbl-toggle" type="button">설명 펼치기</button>
    <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
-   <div class="row"><a class="btn primary" target="_blank" rel="noopener"></a>
+   <div class="row"><button class="btn ghost zoomit" type="button">그림 크게 보기 ⤢</button><a class="btn primary" target="_blank" rel="noopener"></a>
    <a class="btn ghost cmt" target="_blank" rel="noopener">영상 댓글로 감상평 남기기 ↗</a></div>
    ${sealHTML(i)}`;
   plaque.querySelector('h1').textContent = r.t; { const tg = plaque.querySelector('.lbl-toggle'); if (tg) tg.onclick = () => { const open = plaque.classList.toggle('open'); tg.textContent = open ? '설명 접기' : '설명 펼치기' } } plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
   plaque.querySelector('.nowtxt').textContent = VID.on ? '지금 소리: 음플릭스 영상 (윤진 선생님 해설 포함)' : (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
+  plaque.querySelector('.zoomit').onclick = () => openViewer(i);
   { const c = plaque.querySelector('.cmt'); if (CFG.video && CFG.video.url) c.href = CFG.video.url; else c.remove() }
   plaque.classList.remove('open'); plaque.classList.add('on');
 }
@@ -511,7 +512,24 @@ function renderGB() {
 function openGB(i, write) { GB.cur = i; gbMsg.textContent = ''; gbEl.hidden = false; renderGB(); if (write && GB.ok && i) setTimeout(() => gbText.focus(), 50); else document.getElementById('gbClose').focus() }
 document.getElementById('gbClose').onclick = () => { gbEl.hidden = true };
 gbEl.addEventListener('click', e => { if (e.target === gbEl) gbEl.hidden = true });
-addEventListener('keydown', e => { if (e.key === 'Escape') { gbEl.hidden = true; document.getElementById('stamps').hidden = true } });
+addEventListener('keydown', e => { if (e.key === 'Escape') { gbEl.hidden = true; document.getElementById('stamps').hidden = true; closeViewer() } });
+/* ================= 그림 크게 보기 ================= */
+const viewer = document.getElementById('viewer'), vImg = viewer.querySelector('img'); let vz = { s: 1, x: 0, y: 0 }, vDrag = null, vI = 0;
+function vApply() { vImg.style.transform = `translate(${vz.x}px, ${vz.y}px) scale(${vz.s})` }
+function openViewer(i) {
+  vI = i; const P = PICS[i]; vImg.src = P.real && CFG.images && CFG.images[i] ? CFG.images[i] : P.ctx.canvas.toDataURL('image/jpeg', .9);
+  viewer.querySelector('.v-no').textContent = String(i).padStart(2, '0'); viewer.querySelector('.v-t').textContent = ROOMS[i].t; viewer.querySelector('.v-o').textContent = ROOMS[i].o;
+  vz = { s: 1, x: 0, y: 0 }; vApply(); viewer.hidden = false; document.getElementById('vClose').focus()
+}
+function closeViewer() { viewer.hidden = true }
+document.getElementById('vClose').onclick = closeViewer;
+viewer.addEventListener('click', e => { if (e.target === viewer || e.target.classList.contains('v-stage')) closeViewer() });
+vImg.addEventListener('dblclick', e => { const r = vImg.getBoundingClientRect(); if (vz.s > 1) vz = { s: 1, x: 0, y: 0 }; else { vz.s = 2.2; vz.x = (r.left + r.width / 2 - e.clientX) * 1.2; vz.y = (r.top + r.height / 2 - e.clientY) * 1.2 } vApply() });
+viewer.addEventListener('wheel', e => { e.preventDefault(); vz.s = Math.min(5, Math.max(1, vz.s * (e.deltaY < 0 ? 1.12 : 1 / 1.12))); if (vz.s === 1) vz.x = vz.y = 0; vApply() }, { passive: false });
+const vPts = new Map(); let vPinch = null;
+vImg.addEventListener('pointerdown', e => { e.preventDefault(); vImg.setPointerCapture(e.pointerId); vPts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (vPts.size === 2) { const [a, b] = [...vPts.values()]; vPinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: vz.s } } else vDrag = { x: e.clientX - vz.x, y: e.clientY - vz.y, t: performance.now() } });
+vImg.addEventListener('pointermove', e => { if (!vPts.has(e.pointerId)) return; vPts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (vPinch && vPts.size === 2) { const [a, b] = [...vPts.values()]; vz.s = Math.min(5, Math.max(1, vPinch.s * Math.hypot(a.x - b.x, a.y - b.y) / vPinch.d)); vApply() } else if (vDrag && vz.s > 1) { vz.x = e.clientX - vDrag.x; vz.y = e.clientY - vDrag.y; vApply() } });
+['pointerup', 'pointercancel'].forEach(ev => vImg.addEventListener(ev, e => { vPts.delete(e.pointerId); if (vPts.size < 2) vPinch = null; if (!vPts.size) { if (vDrag && ev === 'pointerup' && e.pointerType === 'touch' && performance.now() - (vImg._lt || 0) < 300) vImg.dispatchEvent(new MouseEvent('dblclick', { clientX: e.clientX, clientY: e.clientY })); vImg._lt = performance.now(); vDrag = null; if (vz.s === 1) { vz.x = vz.y = 0; vApply() } } }));
 { const oa = document.getElementById('openAll'); if (CFG.video && CFG.video.url) oa.href = CFG.video.url; else oa.remove() }
 gbNick.value = store.get('pae-gbnick', ''); gbNick.placeholder = nickOf(myA, myB);
 gbText.addEventListener('input', () => { gbLen.textContent = `${gbText.value.length}/200` });
@@ -601,7 +619,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const objs = [floor]; for (let i = 1; i <= 10; i++) { objs.push(PICS[i].pic); PICS[i].notes.children.forEach(c => objs.push(c)) }
   const hit = ray.intersectObjects(objs)[0]; if (!hit) return;
   if (hit.object.userData.gb) { openGB(hit.object.userData.gb, false); return }
-  if (hit.object.userData.pic) target = PICS[hit.object.userData.pic].front.clone(); else target = hit.point.clone().setY(0)
+  if (hit.object.userData.pic) { const pi = hit.object.userData.pic; if (pi === nearI) openViewer(pi); else target = PICS[pi].front.clone() } else target = hit.point.clone().setY(0)
 });
 const mini = document.getElementById('mini'), mg = mini.getContext('2d');
 const mapXY = (x, z) => [20 + (-z / LEN) * 360, 64 + (x / W2) * 50];
@@ -630,7 +648,7 @@ document.getElementById('enter').onclick = () => {
   document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); initAudio(); if (ac) ac.resume();
   if (preview) { scene.remove(preview); preview = null }
   pos.copy(PREV); heading = Math.PI; camYaw = 0; camera.clearViewOffset();
-  me = makeAvatar(COLORS[myColor], myName + ' (나)', true, myK); me.position.copy(pos); startTogether();
+  me = makeAvatar(COLORS[myColor], myName + ' (나)', true, myK); me.traverse(o => { if (o.isMesh && o.material && !o.isSprite) { o.material = o.material.clone(); o.material.transparent = true } }); me.userData.fade = 1; me.position.copy(pos); startTogether();
   setTimeout(() => document.getElementById('hint').style.opacity = 0, 9000)
 };
 const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
@@ -654,6 +672,7 @@ function collide(p) {
 }
 function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; if (!me) { if (w > 820) camera.setViewOffset(w, h, -w * .2, 0, w, h); else camera.setViewOffset(w, h, 0, h * .22, w, h) } camera.updateProjectionMatrix() }
 addEventListener('resize', resize); resize();
+const VO = { x: 0, y: 0 };
 const camPos = new THREE.Vector3(0, 3.2, 2), camLook = new THREE.Vector3(0, 1.4, -4); let last = performance.now(), picClock = 0;
 function frame(now) {
   const dt = Math.min(.05, (now - last) / 1000); last = now; const t = now / 1000;
@@ -682,7 +701,7 @@ function frame(now) {
   if (hearing && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / needSec(nearI))) }
   if (nearI && !seen.has(nearI) && playing && playing.real && listened[nearI] >= needSec(nearI)) { seen.add(nearI); store.set('pae-seen3', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
   want = nearI ? KEYS[nearI] : 'promenade';
-  if (me) { me.position.set(pos.x, seated ? .3 : moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI && !seated; animateAvatar(me, walkT, moving, !!seated); sendPresence(false); if ((t * 4 | 0) !== updSit.k) { updSit.k = t * 4 | 0; updSit() } }
+  if (me) { me.position.set(pos.x, seated ? .3 : moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI && !seated; { const ft = nearI ? .12 : 1, u = me.userData; if (Math.abs(u.fade - ft) > .005) { u.fade += (ft - u.fade) * Math.min(1, dt * 6); me.traverse(o => { if (o.isMesh && o.material) { o.material.opacity = (o.material.userData.base ?? (o.material.userData.base = o.material.opacity)) * u.fade; o.material.depthWrite = u.fade > .9 } }) } } animateAvatar(me, walkT, moving, !!seated); sendPresence(false); if ((t * 4 | 0) !== updSit.k) { updSit.k = t * 4 | 0; updSit() } }
   for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.st ? .3 : o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv, o.st) }
   for (let k = claps.length - 1; k >= 0; k--) { const c = claps[k], a = (now - c.t0) / 1400; c.s.position.y = 2.7 + a * .8; c.s.material.opacity = 1 - a; if (a >= 1) { c.g.remove(c.s); claps.splice(k, 1) } }
   if (me && lit < 1) lit = Math.min(1, lit + dt / 1.8);
@@ -691,14 +710,23 @@ function frame(now) {
   let cp, cl;
   if (!me) { const a = RM ? 0 : Math.sin(t * .25) * .35; cp = new THREE.Vector3(PREV.x + Math.sin(a) * 3.6, 1.75, PREV.z + Math.cos(a) * 3.6); cl = new THREE.Vector3(PREV.x, 1.15, PREV.z) }
   else if (nearI) {
+    // 작품이 설명 카드에 가리지 않고 남은 화면에 꽉 차게 보이도록 거리 계산
     const p = PICS[nearI]; if (performance.now() - dragYawT > 1500) camYaw = angLerp(camYaw, Math.atan2(p.n.x, p.n.z), 1 - Math.exp(-2.2 * dt));
-    const back = (nearI === 10 ? 5.2 : 4.2) * (camera.aspect < 1 ? 1.35 : 1), dw = (pos.x - p.center.x) * p.n.x + (pos.z - p.center.z) * p.n.z;
-    cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * back, 3.1, pos.z + Math.cos(camYaw) * back);
-    cl = new THREE.Vector3(pos.x - Math.sin(camYaw) * dw, p.center.y - (camera.aspect < 1 ? 1.0 : .45), pos.z - Math.cos(camYaw) * dw) }
+    const W = stage.clientWidth, Hh = stage.clientHeight; let fx = 1, fy = (Hh - 130) / Hh;
+    if (plaque.classList.contains('on')) { const r = plaque.getBoundingClientRect(); if (r.top > Hh * .45 || r.right < W * .6) fx = (W - r.right - 16) / W; else fy = (Hh - 150 - r.bottom) / Hh }
+    const vt = Math.tan(camera.fov * Math.PI / 360), ht = vt * camera.aspect;
+    const d = Math.min(11.5, Math.max(2.6, (p.w / 2 * 1.12) / (ht * Math.max(.3, fx)), (p.h / 2 * 1.12) / (vt * Math.max(.3, fy))));
+    cp = p.center.clone().addScaledVector(p.n, d); cl = p.center.clone() }
   else if (seated) { const f = seated.face; cp = new THREE.Vector3(pos.x + 1.8, 3.1, pos.z - f * 4.6); cl = new THREE.Vector3(pos.x, 1.2, pos.z + f * 6) }
   else { cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * 5.4, 3.3, pos.z + Math.cos(camYaw) * 5.4); cl = new THREE.Vector3(pos.x, 1.3, pos.z) }
   cp.x = Math.max(-W2 + .4, Math.min(W2 - .4, cp.x)); cp.z = Math.max(-LEN + .4, Math.min(-.3, cp.z));
   const k = 1 - Math.exp(-3.2 * dt); camPos.lerp(cp, k); camLook.lerp(cl, k); camera.position.copy(camPos); camera.lookAt(camLook);
+  if (me) {
+    const W = stage.clientWidth, Hh = stage.clientHeight, tg = { x: 0, y: 0 };
+    if (plaque.classList.contains('on')) { const r = plaque.getBoundingClientRect(); if (r.top > Hh * .45 || r.right < W * .6) tg.x = -r.right / 2; else tg.y = -(((r.bottom + (Hh - 150)) / 2) - Hh / 2) }
+    VO.x += (tg.x - VO.x) * Math.min(1, dt * 5); VO.y += (tg.y - VO.y) * Math.min(1, dt * 5);
+    if (Math.abs(VO.x) > .5 || Math.abs(VO.y) > .5) camera.setViewOffset(W, Hh, VO.x, VO.y, W, Hh); else if (camera.view && camera.view.enabled) camera.clearViewOffset();
+  }
   renderer.render(scene, camera); drawMini(); requestAnimationFrame(frame);
 }
 function drawMini() {

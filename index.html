@@ -171,6 +171,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .done b{font-size:1.05rem}
 @media (max-width:560px){.slots{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px 6px}.slot .ring{width:56px}.slot span{font-size:.64rem}}
 
+/* 그림 크게 보기 */
+#viewer{position:fixed;inset:0;z-index:40;background:rgba(14,13,12,.94);display:flex;flex-direction:column}
+.v-stage{flex:1 1 auto;min-height:0;display:grid;place-items:center;overflow:hidden;padding:max(16px,env(safe-area-inset-top,0px)) 16px 8px}
+.v-stage img{max-width:100%;max-height:calc(100vh - 110px);max-height:calc(100dvh - 110px);object-fit:contain;box-shadow:0 20px 60px rgba(0,0,0,.6);cursor:zoom-in;touch-action:none;user-select:none;transition:transform .12s ease-out}
+.v-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#eceae6;font-size:.86rem;
+  padding:10px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.v-bar b{font-size:1.1rem}.v-bar i{color:#a9a39a}.v-help{color:#8d877e;font-size:.76rem}
+#vClose{background:#f3f1ec;color:#141210;border:0;padding:9px 16px;font-weight:700;cursor:pointer}
+@media (max-width:560px){.v-help{display:none}}
+
 /* 감상평 */
 #gb{position:fixed;inset:0;z-index:30;background:rgba(244,243,240,.9);backdrop-filter:blur(4px);display:grid;place-items:center;
   padding:calc(16px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
@@ -231,6 +241,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 <button id="sit" type="button" hidden>🪑 앉기</button>
 <div class="hint" id="hint">WASD 이동 · 마우스로 끌어서 시점 돌리기(Q/E) · 바닥 클릭으로 걷기 · 벤치에서 F로 앉기</div>
 <div class="toast" id="toast"></div>
+<div id="viewer" hidden role="dialog" aria-modal="true" aria-label="그림 크게 보기">
+  <div class="v-stage"><img alt=""></div>
+  <div class="v-bar"><div><b class="v-no"></b> <span class="v-t"></span> <i class="v-o"></i></div><span class="v-help">두 번 누르거나 휠·두 손가락으로 확대 · 끌어서 이동</span><button id="vClose" type="button">닫기 ✕</button></div>
+</div>
 <div id="stamps" hidden role="dialog" aria-modal="true" aria-labelledby="stTitle">
   <div class="board">
     <header><h2 id="stTitle">관람 도장판</h2><button class="x" id="stClose">닫기</button></header>
