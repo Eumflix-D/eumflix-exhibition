@@ -269,10 +269,10 @@ const rail = new THREE.MeshLambertMaterial({ color: '#2a2a2a' });
 const BENCHES = [[0, -12], [0, -30]]; const benchTop = new THREE.MeshLambertMaterial({ color: '#b48a5a' }), benchLeg = new THREE.MeshLambertMaterial({ color: '#ffffff' });
 BENCHES.forEach(([x, z]) => { const t = new THREE.Mesh(new THREE.BoxGeometry(3.4, .08, .8), benchTop); t.position.set(x, .46, z); scene.add(t);[-1.4, 1.4].forEach(dx => { const l = new THREE.Mesh(new THREE.BoxGeometry(.12, .42, .7), benchLeg); l.position.set(x + dx, .21, z); scene.add(l) }) });
 // 입구 벽 글씨
-function makeSign() {
+function makeSign(logo) {
   return canvasTex(1600, 800, (g, w, h) => {
     g.fillStyle = '#f7f6f3'; g.fillRect(0, 0, w, h); g.fillStyle = '#161616'; g.textAlign = 'left';
-    g.font = '500 34px Pretendard, sans-serif'; g.fillText('음플릭스 온라인 전시', 80, 120);
+    if (logo) { const lh = 64; g.drawImage(logo, 80, 70, lh * logo.naturalWidth / logo.naturalHeight, lh); g.font = '500 34px Pretendard, sans-serif'; g.fillText('온라인 전시', 100 + lh * logo.naturalWidth / logo.naturalHeight, 122) } else { g.font = '500 34px Pretendard, sans-serif'; g.fillText('음플릭스 온라인 전시', 80, 120) }
     g.font = '800 170px Pretendard, sans-serif'; g.fillText('전람회의 그림', 70, 320);
     g.font = '500 44px Pretendard, sans-serif'; g.fillStyle = '#55524c'; g.fillText('모데스트 무소륵스키, 1874', 80, 400);
     g.fillStyle = '#161616'; g.fillRect(80, 450, 1440, 2);
@@ -281,6 +281,8 @@ function makeSign() {
   })
 }
 const signMesh = new THREE.Mesh(new THREE.PlaneGeometry(7, 3.5), new THREE.MeshBasicMaterial({ map: makeSign() })); signMesh.position.set(0, 2.7, -.03); signMesh.rotation.y = Math.PI; scene.add(signMesh);
+const LOGO_SRC = CFG.logo || 'assets/brand/eumflix-logo.png';
+{ const li = new Image(); li.onload = () => { signMesh.material.map = makeSign(li); signMesh.material.needsUpdate = true }; li.src = LOGO_SRC }
 
 /* 그림 걸기 */
 const PICS = [null];

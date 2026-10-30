@@ -28,6 +28,8 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   background:linear-gradient(var(--paper) 55%,rgba(255,255,255,0));pointer-events:none}
 .top > *{pointer-events:auto}
 .mark{display:flex;align-items:baseline;gap:10px;min-width:0}
+.mark .logo{height:18px;width:auto;align-self:center}
+.g-logo{display:block;height:44px;width:auto;margin-bottom:22px}
 .mark b{font-weight:800;font-size:1.05rem;white-space:nowrap}
 .mark span{font-size:.78rem;color:var(--muted);white-space:nowrap}
 .bar{display:flex;align-items:center;gap:0;font-size:.8rem}
@@ -137,7 +139,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 <div id="stage" aria-label="3D 전시장"></div>
 
 <div class="top">
-  <div class="mark"><b>전람회의 그림</b><span>음플릭스 온라인 전시</span></div>
+  <div class="mark"><img class="logo" src="assets/brand/eumflix-logo.png" alt="음플릭스"><b>전람회의 그림</b><span>온라인 전시</span></div>
   <div class="bar">
     <span class="live" id="people">혼자 관람 중</span>
     <span id="count">관람 0/10</span>
@@ -174,7 +176,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 <div id="gate">
   <div class="g-wrap">
     <div>
-      <div class="eyebrow">음플릭스 온라인 전시</div>
+      <img class="g-logo" src="assets/brand/eumflix-logo.png" alt="음플릭스"><div class="eyebrow">온라인 전시</div>
       <h1 class="g-title">전람회의<br>그림</h1>
       <p class="g-sub">모데스트 무소륵스키, 1874. 그림 사이를 걸으면 프롬나드가, 작품 앞에 서면 그 곡이 흘러요.</p>
       <dl class="facts">
