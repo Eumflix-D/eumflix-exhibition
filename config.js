@@ -2,7 +2,7 @@
    이 파일만 고치면 돼요. 빈칸('')이나 null이면 그 기능은 꺼진 채로 전시관이 열려요. */
 window.EXHIBIT_CONFIG = {
 
-  /* 1) 방명록: 구글 앱스 스크립트 '웹 앱' 주소 (https://script.google.com/macros/s/..../exec) */
+  /* 1) 방명록: 지금은 쓰지 않아요. 감상평은 음플릭스 영상 댓글로 남겨요. */
   guestbookUrl: '',
 
   /* 2) 함께 관람(다른 학교 친구들 아바타 보이기): Firebase 웹 앱 설정 값

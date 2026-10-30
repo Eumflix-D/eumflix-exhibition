@@ -35,7 +35,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .bar{display:flex;align-items:center;gap:0;font-size:.8rem}
 .bar > *{padding:6px 12px;border-left:1px solid var(--line);white-space:nowrap;color:var(--sub);background:none;border-top:0;border-right:0;border-bottom:0}
 .bar > *:first-child{border-left:0}
-.bar button{cursor:pointer;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
+.bar button,.bar a{cursor:pointer;color:var(--ink);text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
 .bar .live::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--dot);margin-right:6px;vertical-align:1px}
 #mini{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right,0px));top:calc(58px + env(safe-area-inset-top,0px));width:200px;height:64px;cursor:pointer;
   box-shadow:0 1px 0 var(--line)}
@@ -219,7 +219,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
   <div class="bar">
     <span class="live" id="people">혼자 관람 중</span>
     <button id="count" type="button">도장 0/10</button>
-    <button id="openAll">감상평</button>
+    <a id="openAll" target="_blank" rel="noopener">감상평 쓰기 ↗</a>
     <button id="sound" aria-pressed="true">소리 끄기</button>
   </div>
 </div>

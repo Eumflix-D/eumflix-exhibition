@@ -426,7 +426,7 @@ function renderStamps() {
   const box = document.getElementById('slots'); box.innerHTML = '';
   for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(el('b', null, String(i).padStart(2, '0'))); r.appendChild(document.createTextNode('관람 완료!')) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
   const d = document.getElementById('stDone'); d.innerHTML = '';
-  if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))) }
+  if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))); if (CFG.video && CFG.video.url) { const a = el('a', null, '음플릭스 영상에 감상평 남기러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'font-weight:700;color:#e30613'; d.appendChild(a) } }
   else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
 }
 function openStamps() { renderStamps(); document.getElementById('stamps').hidden = false; document.getElementById('stClose').focus() }
@@ -450,18 +450,17 @@ function showPlaque(i, fresh) {
   plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p><button class="lbl-toggle" type="button">설명 펼치기</button>
    <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><a class="btn primary" target="_blank" rel="noopener"></a>
-   <button class="btn ghost" data-gb="write">감상평 남기기</button><button class="btn ghost" data-gb="read">감상평 보기 (${cnt})</button></div>
+   <a class="btn ghost cmt" target="_blank" rel="noopener">영상 댓글로 감상평 남기기 ↗</a></div>
    ${sealHTML(i)}`;
   plaque.querySelector('h1').textContent = r.t; { const tg = plaque.querySelector('.lbl-toggle'); if (tg) tg.onclick = () => { const open = plaque.classList.toggle('open'); tg.textContent = open ? '설명 접기' : '설명 펼치기' } } plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
   plaque.querySelector('.nowtxt').textContent = VID.on ? '지금 소리: 음플릭스 영상 (윤진 선생님 해설 포함)' : (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
-  plaque.querySelector('[data-gb=write]').onclick = () => openGB(i, true);
-  plaque.querySelector('[data-gb=read]').onclick = () => openGB(i, false);
+  { const c = plaque.querySelector('.cmt'); if (CFG.video && CFG.video.url) c.href = CFG.video.url; else c.remove() }
   plaque.classList.remove('open'); plaque.classList.add('on');
 }
 
 /* ================= 방명록 ================= */
-const GB = { items: [], byPic: {}, ok: !!CFG.guestbookUrl, cur: 0 };
+const GB = { items: [], byPic: {}, ok: false, cur: 0 }; // 방명록은 쓰지 않아요 (감상평은 음플릭스 영상 댓글로)
 const gbEl = document.getElementById('gb'), gbList = document.getElementById('gbList'), gbChips = document.getElementById('gbChips'), gbMsg = document.getElementById('gbMsg');
 const gbText = document.getElementById('gbText'), gbNick = document.getElementById('gbNick'), gbSend = document.getElementById('gbSend'), gbLen = document.getElementById('gbLen');
 let devId = store.get('pae-dev', null); if (!devId) { devId = Math.random().toString(36).slice(2) + Date.now().toString(36); store.set('pae-dev', devId) }
@@ -513,7 +512,7 @@ function openGB(i, write) { GB.cur = i; gbMsg.textContent = ''; gbEl.hidden = fa
 document.getElementById('gbClose').onclick = () => { gbEl.hidden = true };
 gbEl.addEventListener('click', e => { if (e.target === gbEl) gbEl.hidden = true });
 addEventListener('keydown', e => { if (e.key === 'Escape') { gbEl.hidden = true; document.getElementById('stamps').hidden = true } });
-document.getElementById('openAll').onclick = () => openGB(0, false);
+{ const oa = document.getElementById('openAll'); if (CFG.video && CFG.video.url) oa.href = CFG.video.url; else oa.remove() }
 gbNick.value = store.get('pae-gbnick', ''); gbNick.placeholder = nickOf(myA, myB);
 gbText.addEventListener('input', () => { gbLen.textContent = `${gbText.value.length}/200` });
 document.getElementById('gbForm').addEventListener('submit', e => {
