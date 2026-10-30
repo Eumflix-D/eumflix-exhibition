@@ -586,9 +586,16 @@ joy.addEventListener('pointerdown', e => { jid = e.pointerId; joy.setPointerCapt
 joy.addEventListener('pointermove', e => { if (e.pointerId === jid) joyMove(e) });
 ['pointerup', 'pointercancel'].forEach(ev => joy.addEventListener(ev, () => { jid = null; jv = { x: 0, y: 0 }; knob.style.transform = '' }));
 const ray = new THREE.Raycaster(), mv = new THREE.Vector2(); let down = null;
-renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY } });
+let dragYawT = 0;
+renderer.domElement.addEventListener('pointerdown', e => { down = { x: e.clientX, y: e.clientY, lx: e.clientX, moved: false }; try { renderer.domElement.setPointerCapture(e.pointerId) } catch (x) { } });
+renderer.domElement.addEventListener('pointermove', e => {
+  if (!down || !me) return; const dx = e.clientX - down.lx; down.lx = e.clientX;
+  if (Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) down.moved = true;
+  if (down.moved) { camYaw -= dx * (e.pointerType === 'touch' ? .008 : .006); dragYawT = performance.now() }
+});
+renderer.domElement.addEventListener('pointercancel', () => { down = null });
 renderer.domElement.addEventListener('pointerup', e => {
-  if (!down || Math.hypot(e.clientX - down.x, e.clientY - down.y) > 8) return; down = null;
+  if (!down || down.moved) { down = null; return } down = null;
   const r = renderer.domElement.getBoundingClientRect(); mv.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1); ray.setFromCamera(mv, camera);
   const objs = [floor]; for (let i = 1; i <= 10; i++) { objs.push(PICS[i].pic); PICS[i].notes.children.forEach(c => objs.push(c)) }
   const hit = ray.intersectObjects(objs)[0]; if (!hit) return;
@@ -629,7 +636,7 @@ function sitDown(st) { seated = st; target = null; pos.set(st.x, 0, st.z); headi
 function standUp() { if (!seated) return; pos.set(seated.x, 0, seated.z + seated.face * .95); seated = null; sendPresence(true); updSit() }
 function updSit() { const st = seated ? null : (me && !nearI ? nearSeat() : null); sitBtn.hidden = !(seated || st); sitBtn.textContent = seated ? '일어나기' : '🪑 앉기'; sitBtn.dataset.on = seated ? 1 : 0 }
 sitBtn.onclick = () => { if (seated) standUp(); else { const st = nearSeat(); if (st) sitDown(st) } };
-addEventListener('keydown', e => { if (!me || /INPUT|TEXTAREA/.test(e.target.tagName) || !gbEl.hidden) return; if (e.key === 'e' || e.key === 'E' || e.key === ' ') { e.preventDefault(); sitBtn.onclick() } });
+addEventListener('keydown', e => { if (!me || /INPUT|TEXTAREA/.test(e.target.tagName) || !gbEl.hidden) return; if (e.key === 'f' || e.key === 'F' || e.key === ' ') { e.preventDefault(); sitBtn.onclick() } });
 
 /* ================= 루프 ================= */
 const angLerp = (a, b, k) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * k };
@@ -645,16 +652,21 @@ function frame(now) {
   let fwd = 0, side = 0;
   if (keys['arrowup'] || keys['w']) fwd += 1; if (keys['arrowdown'] || keys['s']) fwd -= 1; if (keys['arrowright'] || keys['d']) side += 1; if (keys['arrowleft'] || keys['a']) side -= 1;
   if (Math.hypot(jv.x, jv.y) > .15) { fwd = -jv.y; side = jv.x }
+  if (me && !seated) { if (keys['q']) camYaw += 1.8 * dt; if (keys['e']) camYaw -= 1.8 * dt }
   const f = { x: -Math.sin(camYaw), z: -Math.cos(camYaw) }, r = { x: Math.cos(camYaw), z: -Math.sin(camYaw) };
   let mx = f.x * fwd + r.x * side, mz = f.z * fwd + r.z * side;
   if (target && !fwd && !side) { const dx = target.x - pos.x, dz = target.z - pos.z, d = Math.hypot(dx, dz); if (d < .15) target = null; else { mx = dx / d * Math.min(1, d); mz = dz / d * Math.min(1, d) } }
   if (seated && (fwd || side || target)) { const tg = target; standUp(); target = tg }
   if (seated) { mx = mz = 0 }
   const mm = Math.hypot(mx, mz); moving = !!me && mm > .05;
-  if (moving) { const sp = 4.2 * Math.min(1, mm); pos.x += mx / mm * sp * dt; pos.z += mz / mm * sp * dt; collide(pos); heading = angLerp(heading, Math.atan2(mx, mz), 1 - Math.exp(-10 * dt)); camYaw = angLerp(camYaw, Math.atan2(-mx, -mz), 1 - Math.exp(-(fwd || side ? 1.2 : 2.5) * dt)); walkT += dt * 9 }
+  if (moving) { const sp = 4.2 * Math.min(1, mm); pos.x += mx / mm * sp * dt; pos.z += mz / mm * sp * dt; collide(pos); heading = angLerp(heading, Math.atan2(mx, mz), 1 - Math.exp(-10 * dt));
+    if (target && !fwd && !side && performance.now() - dragYawT > 1500) camYaw = angLerp(camYaw, Math.atan2(-mx, -mz), 1 - Math.exp(-1.6 * dt)); walkT += dt * 9 }
   if (wasMoving && !moving) sendPresence(true); wasMoving = moving;
-  let ni = 0, nd = 1e9; for (let i = 1; i <= 10; i++) { const d = pos.distanceTo(PICS[i].front); if (d < nd) { nd = d; ni = i } }
-  const near = me && nd < (ni === 10 ? 3.2 : 2.6) ? ni : 0;
+  let near = 0;
+  if (me && !seated) for (let i = 1; i <= 10; i++) {
+    const P = PICS[i], dx = pos.x - P.center.x, dz = pos.z - P.center.z, d = dx * P.n.x + dz * P.n.z, lat = dx * P.n.z - dz * P.n.x, pad = i === nearI ? .35 : 0;
+    if (d < (i === 10 ? 4.4 : 3.3) + pad && Math.abs(lat) < P.w / 2 + .45 + pad) { near = i; break }
+  }
   if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
   // 그 작품의 음악이 실제로 흘러나오는 동안만 30초를 셉니다 (소리 꺼짐·불러오는 중·다른 곡이면 멈춤)
   const hearing = nearI && soundOn && ac && ac.state === 'running' && playing && playing.name === KEYS[nearI] && !bufLoading.has(KEYS[nearI]) && (playing.real || !(CFG.audio && CFG.audio[nearI]) || bufFail.has(KEYS[nearI]));
@@ -670,7 +682,11 @@ function frame(now) {
   if (preview) { preview.rotation.y = RM ? 0 : Math.sin(t * .6) * .35; animateAvatar(preview, t * 3, false) }
   let cp, cl;
   if (!me) { const a = RM ? 0 : Math.sin(t * .25) * .35; cp = new THREE.Vector3(PREV.x + Math.sin(a) * 3.6, 1.75, PREV.z + Math.cos(a) * 3.6); cl = new THREE.Vector3(PREV.x, 1.15, PREV.z) }
-  else if (nearI) { const p = PICS[nearI], back = (nearI === 10 ? 7.2 : 5.2) * (camera.aspect < 1 ? 1.45 : 1); cp = p.center.clone().addScaledVector(p.n, back).setY(2.6); cl = p.center.clone().setY(p.center.y - (camera.aspect < 1 ? 1.2 : .55)) }
+  else if (nearI) {
+    const p = PICS[nearI]; if (performance.now() - dragYawT > 1500) camYaw = angLerp(camYaw, Math.atan2(p.n.x, p.n.z), 1 - Math.exp(-2.2 * dt));
+    const back = (nearI === 10 ? 5.2 : 4.2) * (camera.aspect < 1 ? 1.35 : 1), dw = (pos.x - p.center.x) * p.n.x + (pos.z - p.center.z) * p.n.z;
+    cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * back, 3.1, pos.z + Math.cos(camYaw) * back);
+    cl = new THREE.Vector3(pos.x - Math.sin(camYaw) * dw, p.center.y - (camera.aspect < 1 ? 1.0 : .45), pos.z - Math.cos(camYaw) * dw) }
   else if (seated) { const f = seated.face; cp = new THREE.Vector3(pos.x + 1.8, 3.1, pos.z - f * 4.6); cl = new THREE.Vector3(pos.x, 1.2, pos.z + f * 6) }
   else { cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * 5.4, 3.3, pos.z + Math.cos(camYaw) * 5.4); cl = new THREE.Vector3(pos.x, 1.3, pos.z) }
   cp.x = Math.max(-W2 + .4, Math.min(W2 - .4, cp.x)); cp.z = Math.max(-LEN + .4, Math.min(-.3, cp.z));
