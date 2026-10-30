@@ -750,6 +750,9 @@ function closeQuiz() { qzEl.hidden = true; QZ.open = false; QZ.key = null }
 document.getElementById('qzClose').onclick = closeQuiz;
 qzEl.addEventListener('click', e => { if (e.target === qzEl) closeQuiz() });
 
+
+/* 함께 관람을 쓰지 않는 사이트(음플릭스 전용 주소)에서는 접속자 수·박수 숨기기 */
+if (!CFG.firebase && !(window.claude && window.claude.use)) { const pp = document.getElementById('people'), cl = document.getElementById('clap'), gl = document.getElementById('gateLive'); if (pp) pp.remove(); if (cl) cl.remove(); if (gl) gl.parentElement.remove() }
 /* ================= 벤치에 앉기 ================= */
 let seated = null;
 const SEATS = []; BENCHES.forEach(([bx, bz]) => [-1.05, 0, 1.05].forEach(ox => [1, -1].forEach(side => SEATS.push({ x: bx + ox, z: bz + side * .12, face: side }))));
