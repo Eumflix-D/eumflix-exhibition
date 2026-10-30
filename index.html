@@ -70,6 +70,16 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .toast{position:fixed;z-index:9;left:50%;top:calc(70px + env(safe-area-inset-top,0px));transform:translateX(-50%);background:var(--ink);color:#fff;font-size:.85rem;padding:9px 16px;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
 
+/* 영상 창 */
+#vid{position:fixed;z-index:5;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(76px + env(safe-area-inset-bottom,0px));width:300px;background:var(--paper);box-shadow:0 1px 2px rgba(0,0,0,.06),0 12px 32px rgba(0,0,0,.1)}
+#vid.big{width:min(560px,calc(100% - 32px))}
+.vid-head{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;font-size:.78rem;font-weight:600}
+.vid-head span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vid-head button{background:none;border:0;padding:0;font-size:.78rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer;color:var(--sub)}
+.vid-frame{position:relative;aspect-ratio:16/9;background:#000}
+.vid-frame iframe,.vid-frame > div{position:absolute;inset:0;width:100%;height:100%}
+@media (max-width:560px){#vid{width:200px;bottom:auto;top:calc(108px + env(safe-area-inset-top,0px))}#vid.big{width:calc(100% - 32px)}}
+
 /* 입장 */
 #gate{position:fixed;inset:0;z-index:20;background:var(--paper);overflow:auto;
   padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
@@ -142,6 +152,10 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 <button id="clap" aria-label="박수 보내기">👏 박수</button>
 <div class="hint" id="hint">방향키·WASD로 걷기 · 바닥이나 작품을 누르면 그쪽으로 걸어가요</div>
 <div class="toast" id="toast"></div>
+<aside id="vid" hidden aria-label="음플릭스 영상">
+  <div class="vid-head"><span id="vidCap">음플릭스 영상</span><button id="vidSize" type="button">크게</button></div>
+  <div class="vid-frame"><div id="vidPlayer"></div></div>
+</aside>
 
 <div id="gb" hidden role="dialog" aria-modal="true" aria-labelledby="gbTitle">
   <div class="sheet">

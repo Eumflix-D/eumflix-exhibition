@@ -177,6 +177,7 @@ function loadBuf(name) {
   bufLoading.set(name, p); return p;
 }
 function initAudio() {
+  if (VID.on) { VID.unlock(); return }
   if (ac) return; try { ac = new (window.AudioContext || window.webkitAudioContext)() } catch (e) { return }
   master = ac.createGain(); master.gain.value = soundOn ? .9 : 0; const comp = ac.createDynamicsCompressor(); master.connect(comp); comp.connect(ac.destination);
   noiseBuf = ac.createBuffer(1, ac.sampleRate * .4, ac.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++)d[i] = Math.random() * 2 - 1;
@@ -191,11 +192,51 @@ function startTrack(name) {
   else { playing = { name, g, next: ac.currentTime + .08, real: false }; loadBuf(name) }
 }
 function tick() {
+  if (VID.on) return;
   if (!ac) return;
   if (!playing || playing.name !== want) startTrack(want);
   else if (!playing.real && bufCache.has(want)) startTrack(want);
   if (!playing.real) { const p = BUILT[playing.name]; while (playing.next < ac.currentTime + .6) { const t0 = playing.next; p.ev.forEach(([t, v, n, d, g]) => play(playing.g, v, t0 + t, n, d, g)); playing.next += p.len } }
 }
+
+
+/* ================= 음플릭스 영상으로 듣기 (유튜브 플레이어를 화면에 띄워 구간 재생) ================= */
+const VID = (() => {
+  const v = CFG.video || {}; let id = null;
+  try { const u = new URL(v.url); id = u.hostname.includes('youtu.be') ? u.pathname.slice(1) : u.searchParams.get('v') } catch (e) { }
+  const on = !!(v.embed && id && v.segments);
+  const box = document.getElementById('vid'), cap = document.getElementById('vidCap');
+  let player = null, ready = false, unlocked = false, cur = null, muted = false, timer = null;
+  if (on) {
+    box.hidden = false;
+    window.onYouTubeIframeAPIReady = () => {
+      player = new YT.Player('vidPlayer', { videoId: id, playerVars: { playsinline: 1, rel: 0, modestbranding: 1, controls: 1, start: v.segments[0][0] },
+        events: { onReady: () => { ready = true; if (unlocked) apply(true) } } })
+    };
+    const s = document.createElement('script'); s.src = 'https://www.youtube.com/iframe_api'; document.head.appendChild(s);
+    document.getElementById('vidSize').onclick = () => { const big = box.classList.toggle('big'); document.getElementById('vidSize').textContent = big ? '작게' : '크게' };
+  }
+  function seg(k) { return v.segments[k] || v.segments[0] }
+  function apply(force) {
+    if (!ready || !unlocked) return;
+    const k = want === 'promenade' ? 0 : KEYS.indexOf(want);
+    if (k !== cur || force) {
+      cur = k; const [a] = seg(k); player.seekTo(a, true); if (!muted) player.playVideo();
+      cap.textContent = k ? `${String(k).padStart(2, '0')} ${ROOMS[k].t}` : '프롬나드 · 전시실을 걸어요';
+    }
+  }
+  function loop() {
+    if (!ready || !unlocked) return; apply(false);
+    const st = player.getPlayerState && player.getPlayerState(); if (st !== 1) return;
+    const t = player.getCurrentTime(), [a, b] = seg(cur);
+    if (t >= b - .4 || t < a - 2) { if (cur === 0) player.seekTo(a, true); else { player.pauseVideo(); cap.textContent += ' · 다시 들으려면 ▶' } }
+  }
+  return {
+    on,
+    unlock() { if (!on) return; unlocked = true; if (ready) { apply(true) } if (!timer) timer = setInterval(loop, 300) },
+    mute(m) { muted = m; if (!ready) return; if (m) player.pauseVideo(); else player.playVideo() }
+  };
+})();
 
 /* ================= 3D 공간 ================= */
 const W2 = 7, LEN = 48;
@@ -307,7 +348,7 @@ function showPlaque(i, fresh) {
    ${seen.has(i) ? `<div class="seen${fresh ? ' pop' : ''}">관람함</div>` : ''}`;
   plaque.querySelector('h1').textContent = r.t; plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
-  plaque.querySelector('.nowtxt').textContent = (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
+  plaque.querySelector('.nowtxt').textContent = VID.on ? '지금 소리: 음플릭스 영상 (윤진 선생님 해설 포함)' : (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
   plaque.querySelector('[data-gb=write]').onclick = () => openGB(i, true);
   plaque.querySelector('[data-gb=read]').onclick = () => openGB(i, false);
   plaque.classList.add('on');
@@ -467,7 +508,7 @@ document.getElementById('enter').onclick = () => {
   me = makeAvatar(COLORS[myColor], nickOf(myA, myB) + ' (나)', true); me.position.copy(pos); startTogether();
   setTimeout(() => document.getElementById('hint').style.opacity = 0, 9000)
 };
-const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
+const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
 
 /* ================= 루프 ================= */
 const angLerp = (a, b, k) => { let d = ((b - a + Math.PI) % (2 * Math.PI) + 2 * Math.PI) % (2 * Math.PI) - Math.PI; return a + d * k };
