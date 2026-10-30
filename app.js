@@ -426,7 +426,7 @@ function renderStamps() {
   const box = document.getElementById('slots'); box.innerHTML = '';
   for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(el('b', null, String(i).padStart(2, '0'))); r.appendChild(document.createTextNode('관람 완료!')) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
   const d = document.getElementById('stDone'); d.innerHTML = '';
-  if (seen.size >= 10) { const qb = el('button', 'qz-main', '🎵 그림 맞히기 퀴즈'); qb.type = 'button'; qb.onclick = () => { document.getElementById('stamps').hidden = true; quizInvite() }; d.appendChild(qb); d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))); if (CFG.video && CFG.video.url) { const a = el('a', null, '음플릭스 영상에 감상평 남기러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'font-weight:700;color:#e30613'; d.appendChild(a) } }
+  if (seen.size >= 10) { const qb = el('button', 'qz-main', '🎵 그림 맞히기 퀴즈'); qb.type = 'button'; qb.onclick = () => { document.getElementById('stamps').hidden = true; quizInvite() }; d.appendChild(qb); if (store.get('pae-cert', null)) { const cb2 = el('button', 'qz-ghost', '📜 감상 확인증'); cb2.type = 'button'; cb2.onclick = () => { document.getElementById('stamps').hidden = true; showCert() }; d.appendChild(cb2) } d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))); if (CFG.video && CFG.video.url) { const a = el('a', null, '음플릭스 영상에 감상평 남기러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; a.style.cssText = 'font-weight:700;color:#e30613'; d.appendChild(a) } }
   else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
 }
 function openStamps() { renderStamps(); document.getElementById('stamps').hidden = false; document.getElementById('stClose').focus() }
@@ -696,10 +696,49 @@ function showResult() {
   const big = el('div', 'qz-big'); big.appendChild(el('b', null, String(sc))); big.appendChild(el('span', null, ' / 10')); qzBody.appendChild(big);
   qzBody.appendChild(el('p', 'qz-sub', msg));
   const ul = el('ul', 'qz-list'); QZ.answers.forEach(a => { const li = el('li', a.ok ? 'ok' : 'no'); li.appendChild(el('span', null, a.ok ? '○' : '✕')); li.appendChild(el('span', null, `${String(a.i).padStart(2, '0')} ${ROOMS[a.i].t}`)); ul.appendChild(li) }); qzBody.appendChild(ul);
-  const row = el('div', 'qz-row');
-  if (CFG.video && CFG.video.url) { const a = el('a', 'qz-main', '음플릭스에 감상평 달러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; row.appendChild(a) }
+  const row = el('div', 'qz-row'); const cb = el('button', 'qz-main', '📜 감상 확인증 만들기'); cb.type = 'button'; cb.onclick = certForm; row.appendChild(cb);
+  if (CFG.video && CFG.video.url) { const a = el('a', 'qz-ghost', '음플릭스에 감상평 달러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; row.appendChild(a) }
   const re = el('button', 'qz-ghost', '다시 도전'); re.type = 'button'; re.onclick = startQuiz; const bk = el('button', 'qz-ghost', '전시실로 돌아가기'); bk.type = 'button'; bk.onclick = closeQuiz; row.append(re, bk); qzBody.appendChild(row);
-  QZ.done = true
+  QZ.done = true; qzEl.hidden = false
+}
+/* 감상 확인증: 내 감상평은 이 기기 화면에만 들어가요 (어디로도 보내지 않아요) */
+function certForm() {
+  QZ.key = null; const prev = store.get('pae-cert', {});
+  qzBody.innerHTML = '';
+  qzBody.appendChild(el('h2', null, '마지막으로, 내 감상평을 써 볼까요?'));
+  qzBody.appendChild(el('p', 'qz-sub', '감상평은 내 감상 확인증에만 들어가요. 다른 사람에게는 보이지 않아요.'));
+  const ta = document.createElement('textarea'); ta.className = 'qz-ta'; ta.maxLength = 300; ta.rows = 5; ta.placeholder = '가장 기억에 남는 그림과 음악은? 음악을 듣고 어떤 장면이 떠올랐나요?'; ta.value = prev.review || ''; qzBody.appendChild(ta);
+  const cnt = el('div', 'qz-cnt', `${ta.value.length}/300`); qzBody.appendChild(cnt); ta.oninput = () => { cnt.textContent = `${ta.value.length}/300` };
+  const msg = el('p', 'qz-fb no', ''); qzBody.appendChild(msg);
+  const row = el('div', 'qz-row'); const ok = el('button', 'qz-main', '감상 확인증 보기'); ok.type = 'button';
+  ok.onclick = () => { const v = ta.value.trim(); if (v.length < 10) { msg.textContent = '열 글자 이상 써 주세요.'; ta.focus(); return } store.set('pae-cert', { score: QZ.score, review: v, date: Date.now(), name: myName || nickOf(myA, myB) }); showCert() };
+  row.appendChild(ok); qzBody.appendChild(row); qzEl.hidden = false; ta.focus()
+}
+function showCert() {
+  const c = store.get('pae-cert', null); if (!c) return certForm();
+  qzBody.innerHTML = '';
+  const cert = el('div', 'cert');
+  cert.appendChild(el('div', 'cert-k', '음플릭스 온라인 전시'));
+  cert.appendChild(el('h2', 'cert-t', '감상 확인증'));
+  cert.appendChild(el('div', 'cert-s', '무소륵스키 〈전람회의 그림〉'));
+  const dl = el('dl', 'cert-dl');
+  const row = (k, v) => { const d = el('div'); d.appendChild(el('dt', null, k)); if (typeof v === 'string') d.appendChild(el('dd', null, v)); else { const dd = el('dd'); dd.appendChild(v); d.appendChild(dd) } dl.appendChild(d) };
+  row('이름', c.name || myName || nickOf(myA, myB));
+  const st = el('div', 'cert-stamps'); for (let i = 1; i <= 10; i++) { const r = el('span', seen.has(i) ? 'on' : '', String(i).padStart(2, '0')); st.appendChild(r) } const sw2 = el('div'); sw2.appendChild(el('b', null, `${seen.size} / 10개`)); sw2.appendChild(st); row('관람 도장', sw2);
+  row('퀴즈 점수', `${c.score} / 10점`);
+  row('감상 날짜', new Date(c.date).toLocaleDateString('ko-KR'));
+  cert.appendChild(dl);
+  const rv = el('div', 'cert-rv'); rv.appendChild(el('div', 'cert-rk', '내 감상평')); rv.appendChild(el('p', null, c.review)); cert.appendChild(rv);
+  cert.appendChild(el('p', 'cert-praise', '감상 수업에 훌륭하게 참여했어요. 칭찬해요!'));
+  const foot = el('div', 'cert-foot'); const lg = document.createElement('img'); lg.src = LOGO_SRC; lg.alt = '음플릭스'; lg.className = 'cert-logo'; foot.appendChild(lg);
+  const crew = el('div', 'cert-crew');['assets/chars/c1.png', 'assets/chars/c2.png', 'assets/chars/c3.png'].forEach(src => { const im = document.createElement('img'); im.src = src; im.alt = ''; crew.appendChild(im) }); foot.appendChild(crew);
+  cert.appendChild(foot);
+  qzBody.appendChild(cert);
+  qzBody.appendChild(el('p', 'qz-sub cert-hint', '이 화면을 캡처해서 선생님께 보여 주세요.'));
+  const r2 = el('div', 'qz-row');
+  if (CFG.video && CFG.video.url) { const a = el('a', 'qz-ghost', '음플릭스에 감상평 달러 가기 ↗'); a.href = CFG.video.url; a.target = '_blank'; a.rel = 'noopener'; r2.appendChild(a) }
+  const ed = el('button', 'qz-ghost', '감상평 고치기'); ed.type = 'button'; ed.onclick = certForm; const bk = el('button', 'qz-ghost', '전시실로 돌아가기'); bk.type = 'button'; bk.onclick = closeQuiz; r2.append(ed, bk); qzBody.appendChild(r2);
+  qzEl.hidden = false; qzEl.querySelector('.qz-card').scrollTop = 0
 }
 function closeQuiz() { qzEl.hidden = true; QZ.open = false; QZ.key = null }
 document.getElementById('qzClose').onclick = closeQuiz;
