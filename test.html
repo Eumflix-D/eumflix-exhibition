@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><title>접속 테스트</title>
+<body style="font:24px sans-serif;padding:40px">
+<h1>접속 테스트 페이지</h1><p>이 글이 보이면 이 주소(eumflix-d.github.io)는 학교에서 열려요.</p>
+<p id="r">외부 파일 확인 중...</p>
+<script>
+const t={'three.js (cdnjs)':'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js','글꼴 (jsdelivr)':'https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css'};
+Promise.all(Object.entries(t).map(([k,u])=>fetch(u,{mode:'no-cors'}).then(()=>k+': 열림 ✅',()=>k+': 막힘 ❌'))).then(a=>document.getElementById('r').innerHTML=a.join('<br>'));
+</script>
