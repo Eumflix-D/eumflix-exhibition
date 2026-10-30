@@ -322,68 +322,95 @@ function nameTag(text, mine) {
   const w = Math.min(250, g.measureText(text).width + 28); g.fillStyle = mine ? '#161616' : 'rgba(255,255,255,.94)'; g.fillRect((256 - w) / 2, 10, w, 44); g.fillStyle = mine ? '#ffffff' : '#161616'; g.textAlign = 'center'; g.fillText(text, 128, 42);
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false })); s.scale.set(1.2, .3, 1); s.position.y = 2.15; s.renderOrder = 10; return s
 }
-const KINDS = [{ n: '학생', d: '교복 재킷' }, { n: '단발 학생', d: '교복 원피스' }, { n: '화가', d: '베레모와 팔레트' }, { n: '지휘자', d: '연미복과 지휘봉' }, { n: '바이올리니스트', d: '바이올린을 든 연주자' }, { n: '고양이', d: '꼬리 달린 관람객' },
-  { n: '음플 검은 머리', d: '음플릭스 캐릭터', img: 'assets/chars/c1.png', hair: '#0b0b0b' }, { n: '음플 장미', d: '음플릭스 캐릭터', img: 'assets/chars/c2.png', hair: '#0b0b0b' }, { n: '음플 갈색 머리', d: '음플릭스 캐릭터', img: 'assets/chars/c3.png', hair: '#3a1a08' }];
-const KIND_ORDER = [6, 7, 8, 0, 1, 2, 3, 4, 5];
-const CHAR_TEX = {};
-function charTex(k) {
-  if (CHAR_TEX[k]) return CHAR_TEX[k];
-  const front = new THREE.Texture(), back = new THREE.Texture(); front.encoding = back.encoding = THREE.sRGBEncoding;
-  const im = new Image(); im.onload = () => { front.image = im; front.needsUpdate = true; const c = document.createElement('canvas'); c.width = im.width; c.height = im.height; const g = c.getContext('2d'); g.translate(c.width, 0); g.scale(-1, 1); g.drawImage(im, 0, 0); g.globalCompositeOperation = 'source-atop'; g.fillStyle = KINDS[k].hair; g.fillRect(0, 0, c.width, c.height); back.image = c; back.needsUpdate = true; CHAR_TEX[k].aspect = im.width / im.height };
-  im.src = KINDS[k].img; return (CHAR_TEX[k] = { front, back, aspect: 1 })
+/* 동물 아바타: 둥근 몸 + 만화 명암(툰) + 얇은 윤곽선 */
+const KINDS = [
+  { n: '곰', fur: '#b07a4f', belly: '#efd2ab', snout: '#efd2ab', nose: '#3a2418', ear: 'round', tail: 'ball' },
+  { n: '토끼', fur: '#f6f2ec', belly: '#ffffff', snout: '#ffffff', nose: '#e88a9a', ear: 'long', inner: '#f6b9c4', tail: 'puff' },
+  { n: '고양이', fur: '#f2a65f', belly: '#fff3e2', snout: '#fff3e2', nose: '#e88a9a', ear: 'tri', inner: '#f6b9c4', tail: 'long' },
+  { n: '여우', fur: '#ea7a3b', belly: '#fff6ec', snout: '#fff6ec', nose: '#2a1a12', ear: 'fox', inner: '#3a2418', tail: 'fox' },
+  { n: '펭귄', fur: '#2d3548', belly: '#ffffff', ear: 'none', beak: '#f4a23a', tail: 'none' },
+  { n: '판다', fur: '#ffffff', belly: '#ffffff', snout: '#ffffff', nose: '#22252b', ear: 'round', earC: '#22252b', limb: '#22252b', patch: '#22252b', tail: 'ball', tailC: '#22252b' },
+  { n: '강아지', fur: '#ead5b2', belly: '#fff7ea', snout: '#fff7ea', nose: '#2a1a12', ear: 'floppy', earC: '#a5754a', tail: 'up' },
+  { n: '개구리', fur: '#7cc46c', belly: '#ecf6cc', ear: 'none', frog: true, tail: 'none' }
+];
+const KIND_ORDER = KINDS.map((_, i) => i);
+const GRAD = (() => { const t = new THREE.DataTexture(new Uint8Array([90, 170, 255]), 3, 1, THREE.LuminanceFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t })();
+const TOON = {}; const T = c => TOON[c] || (TOON[c] = new THREE.MeshToonMaterial({ color: c, gradientMap: GRAD }));
+const LINE = new THREE.MeshBasicMaterial({ color: '#2a2018', side: THREE.BackSide });
+const SPH = new THREE.SphereGeometry(1, 32, 24);
+function blob(parent, c, x, y, z, sx, sy, sz, outline) {
+  const m = new THREE.Mesh(SPH, T(c)); m.position.set(x, y, z); m.scale.set(sx, sy, sz); parent.add(m);
+  if (outline) { const o = new THREE.Mesh(SPH, LINE); o.position.copy(m.position); o.scale.set(sx + .025, sy + .025, sz + .025); parent.add(o) }
+  return m
 }
-const MAT = {}; const M = c => MAT[c] || (MAT[c] = new THREE.MeshLambertMaterial({ color: c }));
-function onHead(x, dy, r) { return Math.sqrt(Math.max(0, r * r - x * x - dy * dy)) }
-function makeAvatar(color, name, mine, kind) {
-  kind = Math.abs(kind | 0) % KINDS.length; const cat = kind === 5, SK = '#f0c7a0';
-  const g = new THREE.Group();
-  const bodyC = kind === 2 ? '#efe6d4' : kind === 3 ? '#1b1b1f' : color;
-  const legs = [-.12, .12].map(x => { const p = new THREE.Group(); p.position.set(x, .45, 0); const l = new THREE.Mesh(new THREE.CylinderGeometry(.09, .085, .45, 10), M(cat ? color : '#2b2b33')); l.position.y = -.225; p.add(l); const s = new THREE.Mesh(new THREE.SphereGeometry(.1, 10, 8), M(cat ? color : '#1a1a1a')); s.scale.set(1, .6, 1.4); s.position.set(0, -.44, .04); p.add(s); g.add(p); return p });
-  const dress = kind === 1 || kind === 4;
-  const body = new THREE.Mesh(dress ? new THREE.CylinderGeometry(.25, .46, .8, 20) : new THREE.CylinderGeometry(.27, .31, .72, 20), M(bodyC)); body.position.y = dress ? .83 : .8; g.add(body);
-  if (kind === 0 || kind === 1) { const c = new THREE.Mesh(new THREE.ConeGeometry(.12, .2, 3), M('#ffffff')); c.position.set(0, 1.08, .21); c.rotation.x = Math.PI; g.add(c); const t = new THREE.Mesh(new THREE.BoxGeometry(.06, .2, .02), M('#b3262b')); t.position.set(0, 1.0, .29); g.add(t) }
-  if (kind === 3) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.2, .5), M('#ffffff')); s.position.set(0, .88, .3); g.add(s); const bt = new THREE.Mesh(new THREE.BoxGeometry(.2, .07, .04), M(color)); bt.position.set(0, 1.1, .3); g.add(bt); const tl = new THREE.Mesh(new THREE.BoxGeometry(.44, .5, .05), M('#1b1b1f')); tl.position.set(0, .5, -.28); tl.rotation.x = .18; g.add(tl) }
-  if (kind === 2) { const sc = new THREE.Mesh(new THREE.TorusGeometry(.24, .06, 8, 20), M(color)); sc.rotation.x = Math.PI / 2; sc.position.y = 1.15; g.add(sc) }
-  const arms = [-1, 1].map(s => { const p = new THREE.Group(); p.position.set(s * .35, 1.1, 0); const a = new THREE.Mesh(new THREE.CylinderGeometry(.075, .07, .48, 10), M(bodyC)); a.position.y = -.24; p.add(a); const h = new THREE.Mesh(new THREE.SphereGeometry(.085, 10, 8), M(cat ? color : SK)); h.position.y = -.5; p.add(h); g.add(p); return p });
-  if (kind === 2) { const pal = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .03, 18), M('#c99a5b')); pal.position.set(-.02, -.55, .14); pal.rotation.x = Math.PI / 2; arms[0].add(pal);[['#d33', -.07], ['#36c', 0], ['#fc3', .07]].forEach(([c, x]) => { const d = new THREE.Mesh(new THREE.SphereGeometry(.03, 6, 6), M(c)); d.position.set(x, -.48, .17); arms[0].add(d) }) }
-  if (kind === 3) { const bat = new THREE.Mesh(new THREE.CylinderGeometry(.012, .008, .5, 6), M('#f5f5f5')); bat.position.set(0, -.62, .22); bat.rotation.x = 1.1; arms[1].add(bat) }
-  if (kind === 4) { const v = new THREE.Group(); const vb = new THREE.Mesh(new THREE.SphereGeometry(.15, 16, 12), M('#9a5422')); vb.scale.set(1, .55, 1.5); v.add(vb); const nk = new THREE.Mesh(new THREE.BoxGeometry(.045, .045, .38), M('#2a1a10')); nk.position.z = .36; v.add(nk); v.position.set(-.26, 1.2, .14); v.rotation.set(.1, .7, .2); g.add(v); arms[0].rotation.set(-.9, 0, -.3) }
-  const R = .42, HY = 1.58;
-  if (KINDS[kind].img) {
-    const tx = charTex(kind), head = new THREE.Group(); head.position.y = HY + .08; g.add(head);
-    const fm = new THREE.MeshLambertMaterial({ map: tx.front, transparent: true, alphaTest: .4 }), bm = new THREE.MeshLambertMaterial({ map: tx.back, transparent: true, alphaTest: .4 });
-    const f = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.06), fm); f.position.z = .02; head.add(f);
-    const bk = new THREE.Mesh(new THREE.PlaneGeometry(1.08, 1.06), bm); bk.position.z = -.02; bk.rotation.y = Math.PI; head.add(bk);
-    const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .25 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; g.add(sh);
-    const tag = nameTag(name, mine); tag.position.y = 2.5; g.add(tag);
-    g.userData = { body, head, tag, arms, legs, kind }; scene.add(g); return g;
-  }
-  const head = new THREE.Mesh(new THREE.SphereGeometry(R, 28, 20), M(cat ? color : SK)); head.position.y = HY; g.add(head);
-  const cap = (c, cov, tilt, y) => { const h = new THREE.Mesh(new THREE.SphereGeometry(R + .025, 24, 14, 0, Math.PI * 2, 0, Math.PI * cov), M(c)); h.position.y = y || HY + .02; h.rotation.x = tilt; g.add(h); return h };
-  if (kind === 0) cap('#2e2219', .45, -.3);
-  if (kind === 1) cap('#2e2219', .62, -.5);
-  if (kind === 2) { cap('#6b4a2e', .4, -.3); const b = new THREE.Mesh(new THREE.CylinderGeometry(.34, .4, .1, 24), M(color)); b.position.set(.07, HY + .4, -.02); b.rotation.z = -.28; g.add(b); const k = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), M(color)); k.position.set(.05, HY + .47, -.02); g.add(k) }
-  if (kind === 3) cap('#d8d6d0', .42, -.35);
-  if (kind === 4) { cap('#5a3420', .55, -.45); const bk = new THREE.Mesh(new THREE.CylinderGeometry(.36, .3, .72, 18, 1, true, Math.PI * .5, Math.PI), new THREE.MeshLambertMaterial({ color: '#5a3420', side: THREE.DoubleSide })); bk.position.set(0, 1.32, -.06); g.add(bk) }
-  if (cat) {
-    [-1, 1].forEach(s => { const e = new THREE.Mesh(new THREE.ConeGeometry(.13, .26, 4), M(color)); e.position.set(s * .24, HY + .37, 0); e.rotation.z = -s * .35; g.add(e); const n = new THREE.Mesh(new THREE.ConeGeometry(.065, .14, 4), M('#f2b8b8')); n.position.set(s * .24, HY + .35, .05); n.rotation.z = -s * .35; g.add(n) });
-    const tl = new THREE.Mesh(new THREE.TorusGeometry(.26, .055, 8, 18, Math.PI * 1.1), M(color)); tl.position.set(0, .62, -.34); tl.rotation.y = Math.PI / 2; g.add(tl);
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), M('#e88a9a')); nose.position.set(0, HY - .07, onHead(0, -.07, R) + .01); g.add(nose)
-  }
-  const eyeM = new THREE.MeshBasicMaterial({ color: '#1a1210' });[-.14, .14].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 8), eyeM); e.position.set(x, HY + .02, onHead(x, .02, R) - .015); e.scale.set(1, 1.25, .6); g.add(e) });
-  const blushM = new THREE.MeshBasicMaterial({ color: '#f2a39a', transparent: true, opacity: .55 });[-.24, .24].forEach(x => { const b = new THREE.Mesh(new THREE.CircleGeometry(.055, 12), blushM); b.position.set(x, HY - .1, onHead(x, -.1, R) + .006); b.rotation.y = Math.asin(x / R); g.add(b) });
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .25 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; g.add(sh);
-  const tag = nameTag(name, mine); tag.position.y = 2.45; g.add(tag);
-  g.userData = { body, head, tag, arms, legs, kind }; scene.add(g); return g;
+function makeAvatar(color, name, mine, kind, parent) {
+  kind = Math.abs(kind | 0) % KINDS.length; const A = KINDS[kind], P = parent || scene;
+  const g = new THREE.Group(), fur = A.fur, limb = A.limb || fur;
+  // 다리
+  const legs = [-.17, .17].map(x => { const p = new THREE.Group(); p.position.set(x, .26, 0); blob(p, A.frog || A.beak ? (A.beak || limb) : limb, 0, -.16, .05, .14, .1, .18, true); g.add(p); return p });
+  // 몸
+  const body = new THREE.Group(); body.position.y = .62; g.add(body);
+  blob(body, fur, 0, 0, 0, .42, .44, .38, true);
+  blob(body, A.belly, 0, -.04, .14, A.beak ? .32 : .27, A.beak ? .36 : .3, .26, false);
+  // 스카프 (고른 색)
+  const sc = new THREE.Mesh(new THREE.TorusGeometry(.3, .07, 12, 28), T(color)); sc.rotation.x = Math.PI / 2; sc.position.y = .35; body.add(sc);
+  const knot = blob(body, color, .12, .26, .3, .08, .12, .05, false); knot.rotation.z = .4;
+  // 팔
+  const arms = [-1, 1].map(s => { const p = new THREE.Group(); p.position.set(s * .38, .82, 0); const a = blob(p, A.beak ? fur : limb, s * .03, -.16, 0, A.beak ? .08 : .1, A.beak ? .22 : .17, .1, true); a.rotation.z = s * (A.beak ? .35 : .2); g.add(p); return p });
+  // 머리
+  const head = new THREE.Group(); head.position.y = 1.36; g.add(head);
+  const HR = A.frog ? .46 : .5;
+  blob(head, fur, 0, 0, 0, HR, HR * .92, HR * .9, true);
+  const surf = (x, y) => Math.sqrt(Math.max(0, 1 - (x / HR) ** 2 - (y / (HR * .92)) ** 2)) * HR * .9;
+  // 귀
+  const earC = A.earC || fur;
+  if (A.ear === 'round') [-1, 1].forEach(s => { blob(head, earC, s * .36, .34, -.04, .15, .15, .08, true); if (!A.earC) blob(head, A.belly, s * .36, .34, .02, .08, .08, .04, false) });
+  if (A.ear === 'long') [-1, 1].forEach(s => { const e = new THREE.Group(); e.position.set(s * .17, .4, -.04); e.rotation.z = -s * .12; head.add(e); blob(e, fur, 0, .3, 0, .11, .32, .07, true); blob(e, A.inner, 0, .3, .04, .06, .24, .03, false) });
+  if (A.ear === 'tri' || A.ear === 'fox') [-1, 1].forEach(s => { const big = A.ear === 'fox'; const e = new THREE.Mesh(new THREE.ConeGeometry(big ? .17 : .14, big ? .34 : .26, 24), T(fur)); e.position.set(s * .29, .4, -.02); e.rotation.z = -s * .4; head.add(e); const o = new THREE.Mesh(e.geometry, LINE); o.position.copy(e.position); o.rotation.copy(e.rotation); o.scale.setScalar(1.08); head.add(o); const i = new THREE.Mesh(new THREE.ConeGeometry(big ? .09 : .075, big ? .2 : .15, 16), T(A.inner)); i.position.set(s * .29, big ? .39 : .38, .07); i.rotation.z = -s * .4; head.add(i) });
+  if (A.ear === 'floppy') [-1, 1].forEach(s => { const e = blob(head, earC, s * .44, .02, -.02, .11, .25, .08, true); e.rotation.z = s * .25 });
+  // 판다 눈 무늬
+  if (A.patch) [-1, 1].forEach(s => { const p = blob(head, A.patch, s * .17, .04, surf(s * .17, .04) - .04, .1, .13, .06, false); p.rotation.z = s * .5 });
+  // 눈
+  const eyeY = A.frog ? .3 : .05, eyeX = A.frog ? .2 : .17;
+  if (A.frog) [-1, 1].forEach(s => blob(head, fur, s * eyeX, eyeY, .14, .15, .15, .14, true));
+  [-1, 1].forEach(s => { const z = A.frog ? .27 : surf(s * eyeX, eyeY) - .01; blob(head, A.frog ? '#ffffff' : '#1d1612', s * eyeX, eyeY, z, A.frog ? .1 : .065, A.frog ? .1 : .08, .04, false); if (A.frog) blob(head, '#1d1612', s * eyeX, eyeY, z + .04, .055, .06, .02, false); const hl = new THREE.Mesh(SPH, new THREE.MeshBasicMaterial({ color: '#ffffff' })); hl.scale.setScalar(.022); hl.position.set(s * eyeX + .025, eyeY + .03, z + (A.frog ? .07 : .04)); head.add(hl) });
+  // 볼
+  const blushM = new THREE.MeshBasicMaterial({ color: '#f39aa0', transparent: true, opacity: .6 });
+  [-1, 1].forEach(s => { const b = new THREE.Mesh(new THREE.CircleGeometry(.065, 20), blushM); const x = s * .3, y = -.1; b.position.set(x, y, surf(x, y) + .004); b.rotation.y = Math.asin(x / HR) * .9; head.add(b) });
+  // 주둥이 / 부리 / 입
+  if (A.beak) { const bk = new THREE.Mesh(new THREE.ConeGeometry(.08, .18, 20), T(A.beak)); bk.rotation.x = Math.PI / 2; bk.position.set(0, -.07, surf(0, -.07) + .06); head.add(bk) }
+  else if (A.frog) { const sm = new THREE.Mesh(new THREE.TorusGeometry(.13, .018, 8, 24, Math.PI), new THREE.MeshBasicMaterial({ color: '#2a2018' })); sm.rotation.z = Math.PI; sm.position.set(0, -.08, surf(0, -.08) + .01); head.add(sm) }
+  else { blob(head, A.snout, 0, -.11, surf(0, -.11) - .05, .15, .11, .1, false); blob(head, A.nose, 0, -.07, surf(0, -.07) + .035, .045, .035, .03, false) }
+  // 꼬리
+  const tc = A.tailC || fur;
+  if (A.tail === 'ball') blob(body, tc, 0, -.12, -.4, .09, .09, .09, true);
+  if (A.tail === 'puff') blob(body, '#ffffff', 0, -.14, -.4, .12, .12, .12, true);
+  if (A.tail === 'long') { const t = new THREE.Mesh(new THREE.TorusGeometry(.24, .055, 12, 24, Math.PI * 1.15), T(fur)); t.position.set(0, -.02, -.42); t.rotation.y = Math.PI / 2; body.add(t) }
+  if (A.tail === 'fox') { const t = blob(body, fur, 0, -.05, -.5, .14, .14, .3, true); t.rotation.x = .6; blob(body, '#ffffff', 0, .1, -.72, .08, .08, .08, false) }
+  if (A.tail === 'up') { const t = blob(body, fur, 0, .08, -.42, .06, .16, .06, true); t.rotation.x = -.5 }
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(.48, 24), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .22 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .01; g.add(sh);
+  const tag = nameTag(name, mine); tag.position.y = 2.2; g.add(tag);
+  g.userData = { body, head, tag, arms, legs, kind }; P.add(g); return g;
 }
 function animateAvatar(g, ph, mv) {
-  const u = g.userData, s = mv && !RM ? Math.sin(ph) : 0;
-  u.legs[0].rotation.x = s * .5; u.legs[1].rotation.x = -s * .5;
-  if (u.kind !== 4) u.arms[0].rotation.x = -s * .55; u.arms[1].rotation.x = u.kind === 3 && !mv ? -.6 + Math.sin(performance.now() / 300) * .25 : s * .55;
+  const u = g.userData, s = mv && !RM ? Math.sin(ph) : 0, now = performance.now() / 1000;
+  u.legs[0].rotation.x = s * .6; u.legs[1].rotation.x = -s * .6;
+  u.arms[0].rotation.x = -s * .7; u.arms[1].rotation.x = s * .7;
+  u.body.position.y = .62 + (mv && !RM ? Math.abs(s) * .05 : Math.sin(now * 2) * .008);
+  u.head.position.y = 1.36 + (mv && !RM ? Math.abs(s) * .06 : Math.sin(now * 2 + .5) * .012);
+  u.head.rotation.z = mv ? s * .05 : Math.sin(now * .9) * .04;
+}
+/* 고르기 칸에 쓸 얼굴 사진 (한 번 그려서 이미지로) */
+function avatarThumbs(color) {
+  const R = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); R.setSize(160, 160); R.setPixelRatio(1); R.outputEncoding = THREE.sRGBEncoding;
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight('#ffffff', '#b8b0a4', .9)); const d = new THREE.DirectionalLight('#ffffff', .6); d.position.set(2, 4, 5); sc.add(d);
+  const cam = new THREE.PerspectiveCamera(24, 1, .1, 20); cam.position.set(.3, 1.45, 2.6); cam.lookAt(0, 1.26, 0);
+  const out = KINDS.map((_, k) => { const a = makeAvatar(color, '', false, k, sc); a.userData.tag.visible = false; a.rotation.y = .25; R.render(sc, cam); const url = R.domElement.toDataURL('image/png'); sc.remove(a); return url });
+  R.dispose(); return out;
 }
 
 /* ================= 상태 ================= */
-let me = null, myK = store.get('pae-k', 6), preview = null, myColor = store.get('pae-color', 0), myA = store.get('pae-a', Math.floor(Math.random() * 16)), myB = store.get('pae-b', Math.floor(Math.random() * 16));
+let me = null, myK = store.get('pae-k2', 0), preview = null, myColor = store.get('pae-color', 0), myA = store.get('pae-a', Math.floor(Math.random() * 16)), myB = store.get('pae-b', Math.floor(Math.random() * 16));
 let heading = Math.PI, camYaw = 0, walkT = 0, moving = false;
 const pos = new THREE.Vector3(0, 0, -3.5);
 let target = null, nearI = 0, nearSince = 0;
@@ -553,17 +580,15 @@ mini.addEventListener('click', e => { const r = mini.getBoundingClientRect(), mx
 /* 입장: 어두운 전시실 입구에서 캐릭터 고르기 */
 const sw = document.getElementById('sw'), kindsEl = document.getElementById('kinds'), kindDesc = document.getElementById('kindDesc');
 const PREV = new THREE.Vector3(0, 0, -5.2);
-function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].d;[...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
-KIND_ORDER.forEach(i => { const kd = KINDS[i], b = document.createElement('button'); b.type = 'button'; b.textContent = kd.n; b.dataset.k = i; b.onclick = () => { myK = i; buildPreview() }; kindsEl.appendChild(b) });
-document.getElementById('kPrev').onclick = () => { const j = KIND_ORDER.indexOf(myK); myK = KIND_ORDER[(j + KIND_ORDER.length - 1) % KIND_ORDER.length]; buildPreview() };
-document.getElementById('kNext').onclick = () => { const j = KIND_ORDER.indexOf(myK); myK = KIND_ORDER[(j + 1) % KIND_ORDER.length]; buildPreview() };
-COLORS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', '색 ' + (i + 1)); b.setAttribute('aria-pressed', i === myColor); b.onclick = () => { myColor = i;[...sw.children].forEach((x, k) => x.setAttribute('aria-pressed', k === i)); buildPreview() }; sw.appendChild(b) });
+function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].n;[...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
+function buildKindGrid() { kindsEl.innerHTML = ''; const th = avatarThumbs(COLORS[myColor]); KIND_ORDER.forEach(i => { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = i; b.setAttribute('aria-label', KINDS[i].n); b.title = KINDS[i].n; const im = document.createElement('img'); im.src = th[i]; im.alt = ''; b.appendChild(im); b.onclick = () => { myK = i; buildPreview() }; kindsEl.appendChild(b) }); [...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
+COLORS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', '색 ' + (i + 1)); b.setAttribute('aria-pressed', i === myColor); b.onclick = () => { myColor = i;[...sw.children].forEach((x, k) => x.setAttribute('aria-pressed', k === i)); buildPreview(); buildKindGrid() }; sw.appendChild(b) });
 const nickEl = document.getElementById('nickname');
 function showNick() { nickEl.textContent = nickOf(myA, myB); gbNick.placeholder = nickOf(myA, myB) }
-document.body.classList.add('at-gate'); showNick(); buildPreview();
+document.body.classList.add('at-gate'); showNick(); buildKindGrid(); buildPreview();
 document.getElementById('reroll').onclick = () => { myA = Math.floor(Math.random() * 16); myB = Math.floor(Math.random() * 16); showNick() };
 document.getElementById('enter').onclick = () => {
-  store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB); store.set('pae-k', myK);
+  store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB); store.set('pae-k2', myK);
   document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); initAudio(); if (ac) ac.resume();
   if (preview) { scene.remove(preview); preview = null }
   pos.copy(PREV); heading = Math.PI; camYaw = 0; camera.clearViewOffset();
