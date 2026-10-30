@@ -131,6 +131,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px #141210,0 0 0 4px #f3f1ec}
 .enter{margin-top:8px;background:#f3f1ec;color:#141210;border:0;font-size:1rem;font-weight:800;padding:15px 40px;cursor:pointer}
 .enter:hover{background:#fff}
+#gateSound{position:fixed;top:16px;right:16px;z-index:25;background:rgba(255,255,255,.12);color:#f3f1ec;border:1px solid rgba(255,255,255,.35);border-radius:999px;padding:8px 16px;font:inherit;font-size:.85rem;cursor:pointer}
+#gateSound:hover{background:rgba(255,255,255,.22)}
+#gate[hidden] #gateSound{display:none}
 .keys{font-size:.9rem;color:#ffd98a;margin-top:14px;line-height:1.5}
 .keys p{margin:4px 0}
 .keys b{display:inline-block;min-width:5.2em;color:#ffd23f}
@@ -338,6 +341,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 </div>
 
 <div id="gate">
+  <button id="gateSound" type="button" aria-pressed="true">🔊 소리 끄기</button>
   <div class="g-panel">
     <div class="brand-lock">
       <img class="g-logo" src="assets/brand/eumflix-logo.png" alt="음플릭스">

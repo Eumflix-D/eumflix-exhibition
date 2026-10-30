@@ -665,7 +665,9 @@ document.getElementById('enter').onclick = () => {
   me = makeAvatar(COLORS[myColor], myName + ' (나)', true, myK); me.traverse(o => { if (o.isMesh && o.material && !o.isSprite) { o.material = o.material.clone(); o.material.transparent = true } }); me.userData.fade = 1; me.position.copy(pos); startTogether();
   setTimeout(() => document.getElementById('hint').style.opacity = 0, 9000)
 };
-const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
+const sb = document.getElementById('sound'), gsb = document.getElementById('gateSound');
+function toggleSound() { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; gsb.textContent = soundOn ? '🔊 소리 끄기' : '🔇 소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); gsb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) }
+sb.onclick = toggleSound; gsb.onclick = toggleSound;
 
 /* ================= 완주 퀴즈: 음악 듣고 어떤 그림인지 맞히기 ================= */
 const QZ = { open: false, key: null, list: [], at: 0, score: 0, answers: [] };
