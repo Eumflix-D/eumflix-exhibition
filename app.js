@@ -435,27 +435,29 @@ document.getElementById('stClose').onclick = () => { document.getElementById('st
 document.getElementById('stamps').addEventListener('click', e => { if (e.target.id === 'stamps') e.target.hidden = true });
 updCount();
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e }
-const LISTEN = 30, listened = {};
+const listened = {};
+// 도장 기준: 그 작품 음원을 처음부터 끝까지 한 번 (음원이 없으면 기본 음악 한 바퀴)
+function needSec(i) { const k = KEYS[i], b = bufCache.get(k); if (b) return Math.max(5, b.duration - .6); if (BUILT[k]) return BUILT[k].len; return 30 }
 const C36 = 2 * Math.PI * 36;
 function sealHTML(i) {
-  const nn = String(i).padStart(2, '0'), done = seen.has(i), p = Math.min(1, (listened[i] || 0) / LISTEN);
+  const nn = String(i).padStart(2, '0'), done = seen.has(i), p = Math.min(1, (listened[i] || 0) / needSec(i));
   return `<div class="seal ${done ? 'done' : 'wait'}" id="seal"><svg viewBox="0 0 80 80" aria-hidden="true"><circle class="trk" cx="40" cy="40" r="36"/><circle class="prg" cx="40" cy="40" r="36" style="stroke-dasharray:${C36};stroke-dashoffset:${C36 * (1 - p)}"/></svg>
-    <span class="st">${done ? `관람<b>완료!</b>` : `관람<b>${nn}</b><i>30초 듣기</i>`}</span></div>`
+    <span class="st">${done ? `관람<b>완료!</b>` : `관람<b>${nn}</b><i>끝까지 듣기</i>`}</span></div>`
 }
 function showPlaque(i, fresh) {
   if (!i) { plaque.classList.remove('on'); return }
   const r = ROOMS[i], link = listenLink(i), cnt = (GB.byPic[i] || []).length;
-  plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p>
+  plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p><button class="lbl-toggle" type="button">설명 펼치기</button>
    <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><a class="btn primary" target="_blank" rel="noopener"></a>
    <button class="btn ghost" data-gb="write">감상평 남기기</button><button class="btn ghost" data-gb="read">감상평 보기 (${cnt})</button></div>
    ${sealHTML(i)}`;
-  plaque.querySelector('h1').textContent = r.t; plaque.querySelector('.orig').textContent = r.o;
+  plaque.querySelector('h1').textContent = r.t; { const tg = plaque.querySelector('.lbl-toggle'); if (tg) tg.onclick = () => { const open = plaque.classList.toggle('open'); tg.textContent = open ? '설명 접기' : '설명 펼치기' } } plaque.querySelector('.orig').textContent = r.o;
   const a = plaque.querySelector('a'); a.href = link.href; a.textContent = link.label;
   plaque.querySelector('.nowtxt').textContent = VID.on ? '지금 소리: 음플릭스 영상 (윤진 선생님 해설 포함)' : (CFG.audio && CFG.audio[i] && !bufFail.has(KEYS[i])) ? '지금 소리: 음플릭스 음원' : '지금 소리: ' + r.m;
   plaque.querySelector('[data-gb=write]').onclick = () => openGB(i, true);
   plaque.querySelector('[data-gb=read]').onclick = () => openGB(i, false);
-  plaque.classList.add('on');
+  plaque.classList.remove('open'); plaque.classList.add('on');
 }
 
 /* ================= 방명록 ================= */
@@ -667,12 +669,12 @@ function frame(now) {
     const P = PICS[i], dx = pos.x - P.center.x, dz = pos.z - P.center.z, d = dx * P.n.x + dz * P.n.z, lat = dx * P.n.z - dz * P.n.x, pad = i === nearI ? .35 : 0;
     if (d < (i === 10 ? 4.4 : 3.3) + pad && Math.abs(lat) < P.w / 2 + .45 + pad) { near = i; break }
   }
-  if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
+  if (near !== nearI) { if (nearI && !seen.has(nearI)) listened[nearI] = 0; nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
   // 그 작품의 음악이 실제로 흘러나오는 동안만 30초를 셉니다 (소리 꺼짐·불러오는 중·다른 곡이면 멈춤)
   const hearing = nearI && soundOn && ac && ac.state === 'running' && playing && playing.name === KEYS[nearI] && !bufLoading.has(KEYS[nearI]) && (playing.real || !(CFG.audio && CFG.audio[nearI]) || bufFail.has(KEYS[nearI]));
-  { const sl = document.getElementById('seal'), hi = sl && sl.querySelector('.st i'); if (hi) { const want2 = !soundOn ? '소리를 켜 주세요' : hearing ? '듣는 중…' : '음악 준비 중'; if (hi.textContent !== want2) hi.textContent = want2 } }
-  if (hearing && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / LISTEN)) }
-  if (nearI && !seen.has(nearI) && listened[nearI] >= LISTEN) { seen.add(nearI); store.set('pae-seen3', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
+  { const sl = document.getElementById('seal'), hi = sl && sl.querySelector('.st i'); if (hi) { const want2 = !soundOn ? '소리를 켜 주세요' : hearing ? `${Math.max(0, Math.ceil(needSec(nearI) - (listened[nearI] || 0)))}초 남음` : '음악 준비 중'; if (hi.textContent !== want2) hi.textContent = want2 } }
+  if (hearing && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / needSec(nearI))) }
+  if (nearI && !seen.has(nearI) && playing && playing.real && listened[nearI] >= needSec(nearI)) { seen.add(nearI); store.set('pae-seen3', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
   want = nearI ? KEYS[nearI] : 'promenade';
   if (me) { me.position.set(pos.x, seated ? .3 : moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI && !seated; animateAvatar(me, walkT, moving, !!seated); sendPresence(false); if ((t * 4 | 0) !== updSit.k) { updSit.k = t * 4 | 0; updSit() } }
   for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.st ? .3 : o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv, o.st) }
