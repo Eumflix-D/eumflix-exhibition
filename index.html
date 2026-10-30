@@ -122,7 +122,9 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .k-row > button{flex:0 0 auto;width:32px;height:32px;border:1px solid rgba(255,255,255,.3);background:none;color:#f3f1ec;font-size:1.2rem;line-height:1;cursor:pointer;border-radius:50%}
 .k-desc{font-size:.8rem;color:#a9a39a;margin-top:8px;min-height:1.2em}
 .me{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.me b{font-size:1.1rem;font-weight:800}
+.me input{font:inherit;font-size:1.05rem;font-weight:700;width:9.5em;max-width:100%;padding:7px 10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.06);color:#f3f1ec;border-radius:2px}
+.me input::placeholder{color:#8d877e;font-weight:500}
+#nickMsg{margin:6px 0 0;font-size:.76rem;color:#ffb4a8;min-height:1em}
 .me button{background:none;border:0;padding:0;font-size:.8rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer;color:#a9a39a}
 .swatches{display:flex;gap:7px}
 .swatches button{width:26px;height:26px;border:0;cursor:pointer;border-radius:50%}
@@ -271,7 +273,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
     </div>
     <div class="g-sec two">
       <div><div class="g-k">스카프 색</div><div class="swatches" id="sw" role="group" aria-label="색"></div></div>
-      <div><div class="g-k">이름표</div><div class="me"><b id="nickname"></b><button id="reroll" type="button">다시 뽑기</button></div></div>
+      <div><label class="g-k" for="nickIn">이름표 (직접 쓰거나 비워 두면 자동)</label><div class="me"><input id="nickIn" maxlength="8" autocomplete="off" spellcheck="false"><button id="reroll" type="button">다른 이름 추천</button></div><p id="nickMsg" role="status"></p></div>
     </div>
     <button class="enter" id="enter">입장하기</button>
     <div class="keys">컴퓨터: WASD로 걷고 마우스로 끌어서 둘러봐요. 휴대폰: 조이스틱으로 걷고 화면을 밀어서 둘러봐요.</div>

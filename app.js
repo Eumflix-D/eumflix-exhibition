@@ -426,7 +426,7 @@ function renderStamps() {
   const box = document.getElementById('slots'); box.innerHTML = '';
   for (let i = 1; i <= 10; i++) { const on = seen.has(i), b = el('button', 'slot' + (on ? ' on' : '')); b.type = 'button'; const r = el('div', 'ring'); if (on) { r.appendChild(el('b', null, String(i).padStart(2, '0'))); r.appendChild(document.createTextNode('관람 완료!')) } else r.textContent = String(i).padStart(2, '0'); b.appendChild(r); b.appendChild(el('span', null, ROOMS[i].t)); b.onclick = () => { if (me) { target = PICS[i].front.clone(); document.getElementById('stamps').hidden = true } }; box.appendChild(b) }
   const d = document.getElementById('stDone'); d.innerHTML = '';
-  if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + nickOf(myA, myB))) }
+  if (seen.size >= 10) { d.appendChild(el('b', null, '완주! 전람회의 그림 산책을 마쳤어요')); d.appendChild(el('span', null, new Date(store.get('pae-done', Date.now())).toLocaleDateString('ko-KR') + ' · ' + (myName || nickOf(myA, myB)))) }
   else d.appendChild(el('span', null, `앞으로 ${10 - seen.size}점 남았어요`));
 }
 function openStamps() { renderStamps(); document.getElementById('stamps').hidden = false; document.getElementById('stClose').focus() }
@@ -517,7 +517,7 @@ document.getElementById('openAll').onclick = () => openGB(0, false);
 gbNick.value = store.get('pae-gbnick', ''); gbNick.placeholder = nickOf(myA, myB);
 gbText.addEventListener('input', () => { gbLen.textContent = `${gbText.value.length}/200` });
 document.getElementById('gbForm').addEventListener('submit', e => {
-  e.preventDefault(); const m = gbText.value.trim(), n = (gbNick.value.trim() || nickOf(myA, myB)).slice(0, 12);
+  e.preventDefault(); const m = gbText.value.trim(), n = (gbNick.value.trim() || myName || nickOf(myA, myB)).slice(0, 12);
   if (m.length < 5) { gbMsg.textContent = '조금만 더 써 줄래요? 다섯 글자 이상이면 돼요.'; return }
   if (ExhibitFilter.isBad(m + ' ' + n)) { gbMsg.textContent = '바르고 고운 말로 다시 써 줄래요? 🙂'; return }
   if (ExhibitFilter.hasPersonal(m + ' ' + n)) { gbMsg.textContent = '전화번호·주소·SNS 아이디 같은 개인정보는 쓸 수 없어요.'; return }
@@ -536,7 +536,7 @@ const others = new Map(); let fb = null, myRef = null, serverOffset = 0;
 function updPeople() { const n = [...others.values()].filter(o => o.on).length + 1; document.getElementById('people').textContent = n > 1 ? `지금 ${n}명 관람 중` : (fb ? '지금 나 혼자 관람 중' : '혼자 관람 중') }
 function upsertPeer(key, v) {
   if (!v || typeof v.x !== 'number' || typeof v.z !== 'number') return;
-  const c = Math.abs(v.c | 0) % COLORS.length, a = Math.abs(v.a | 0) % 16, b = Math.abs(v.b | 0) % 16, kd = Math.abs(v.k | 0) % KINDS.length, name = nickOf(a, b);
+  const c = Math.abs(v.c | 0) % COLORS.length, a = Math.abs(v.a | 0) % 16, b = Math.abs(v.b | 0) % 16, kd = Math.abs(v.k | 0) % KINDS.length, rawN = typeof v.n === 'string' ? v.n.replace(/\s+/g, ' ').trim().slice(0, 8) : '', name = rawN.length >= 2 && !ExhibitFilter.isBad(rawN) && !ExhibitFilter.hasPersonal(rawN) ? rawN : nickOf(a, b);
   let o = others.get(key);
   if (!o || o.c !== c || o.name !== name || o.kd !== kd) { if (o) scene.remove(o.g); o = { g: makeAvatar(COLORS[c], name, false, kd), c, kd, name, cur: new THREE.Vector3(v.x, 0, v.z), r: +v.r || 0, cl: v.cl || 0 }; others.set(key, o) }
   o.tx = Math.max(-W2, Math.min(W2, v.x)); o.tz = Math.max(-LEN, Math.min(0, v.z)); o.tr = +v.r || 0; o.mv = !!v.mv; o.st = !!v.st; o.t = +v.t || 0; o.on = true;
@@ -566,7 +566,7 @@ async function startTogether() {
 let lastSent = 0, lastClap = 0;
 function sendPresence(force) {
   if (!myRef || !me) return; const now = performance.now(); if (!force && (!moving || now - lastSent < 280)) return; lastSent = now;
-  const d = { x: +pos.x.toFixed(2), z: +pos.z.toFixed(2), r: +heading.toFixed(2), c: myColor, a: myA, b: myB, k: myK, st: !!seated, mv: !!moving, t: firebase.database.ServerValue.TIMESTAMP };
+  const d = { x: +pos.x.toFixed(2), z: +pos.z.toFixed(2), r: +heading.toFixed(2), c: myColor, a: myA, b: myB, k: myK, n: myName, st: !!seated, mv: !!moving, t: firebase.database.ServerValue.TIMESTAMP };
   if (lastClap) d.cl = lastClap; myRef.set(d).catch(() => { })
 }
 let wasMoving = false;
@@ -615,16 +615,23 @@ const PREV = new THREE.Vector3(0, 0, -5.2);
 function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].n;[...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
 function buildKindGrid() { kindsEl.innerHTML = ''; const th = avatarThumbs(COLORS[myColor]); KIND_ORDER.forEach(i => { const b = document.createElement('button'); b.type = 'button'; b.dataset.k = i; b.setAttribute('aria-label', KINDS[i].n); b.title = KINDS[i].n; const im = document.createElement('img'); im.src = th[i]; im.alt = ''; b.appendChild(im); b.onclick = () => { myK = i; buildPreview() }; kindsEl.appendChild(b) }); [...kindsEl.children].forEach(x => x.setAttribute('aria-pressed', +x.dataset.k === myK)) }
 COLORS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', '색 ' + (i + 1)); b.setAttribute('aria-pressed', i === myColor); b.onclick = () => { myColor = i;[...sw.children].forEach((x, k) => x.setAttribute('aria-pressed', k === i)); buildPreview(); buildKindGrid() }; sw.appendChild(b) });
-const nickEl = document.getElementById('nickname');
-function showNick() { nickEl.textContent = nickOf(myA, myB); gbNick.placeholder = nickOf(myA, myB) }
+const nickIn = document.getElementById('nickIn'), nickMsg = document.getElementById('nickMsg');
+let myName = '';
+nickIn.value = store.get('pae-name', '');
+function nameNow() { return (nickIn.value.trim().replace(/\s+/g, ' ') || nickOf(myA, myB)).slice(0, 8) }
+function nameProblem(n) { if (n.length < 2) return '두 글자 이상 써 주세요.'; if (ExhibitFilter.isBad(n)) return '바르고 고운 이름으로 써 주세요 🙂'; if (ExhibitFilter.hasPersonal(n) || /\d{3,}/.test(n)) return '전화번호·SNS 같은 개인정보는 이름으로 쓸 수 없어요.'; return '' }
+function showNick() { nickIn.placeholder = nickOf(myA, myB); gbNick.placeholder = nameNow(); nickMsg.textContent = '' }
+nickIn.addEventListener('input', () => { nickMsg.textContent = nickIn.value.trim() ? nameProblem(nameNow()) : '' });
 document.body.classList.add('at-gate'); showNick(); buildKindGrid(); buildPreview();
-document.getElementById('reroll').onclick = () => { myA = Math.floor(Math.random() * 16); myB = Math.floor(Math.random() * 16); showNick() };
+document.getElementById('reroll').onclick = () => { myA = Math.floor(Math.random() * 16); myB = Math.floor(Math.random() * 16); nickIn.value = ''; showNick() };
 document.getElementById('enter').onclick = () => {
+  myName = nameNow(); const prob = nameProblem(myName); if (prob) { nickMsg.textContent = prob; nickIn.focus(); return }
+  store.set('pae-name', nickIn.value.trim()); gbNick.placeholder = myName;
   store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB); store.set('pae-k2', myK);
   document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); initAudio(); if (ac) ac.resume();
   if (preview) { scene.remove(preview); preview = null }
   pos.copy(PREV); heading = Math.PI; camYaw = 0; camera.clearViewOffset();
-  me = makeAvatar(COLORS[myColor], nickOf(myA, myB) + ' (나)', true, myK); me.position.copy(pos); startTogether();
+  me = makeAvatar(COLORS[myColor], myName + ' (나)', true, myK); me.position.copy(pos); startTogether();
   setTimeout(() => document.getElementById('hint').style.opacity = 0, 9000)
 };
 const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
