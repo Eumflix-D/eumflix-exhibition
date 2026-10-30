@@ -418,7 +418,7 @@ let me = null, myK = store.get('pae-k2', 0), preview = null, myColor = store.get
 let heading = Math.PI, camYaw = 0, walkT = 0, moving = false;
 const pos = new THREE.Vector3(0, 0, -3.5);
 let target = null, nearI = 0, nearSince = 0;
-const seen = new Set(store.get('pae-seen', []));
+const seen = new Set(store.get('pae-seen3', []));
 const plaque = document.getElementById('plaque'), toastEl = document.getElementById('toast');
 function toast(s) { toastEl.textContent = s; toastEl.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => toastEl.classList.remove('on'), 2400) }
 function updCount() { document.getElementById('count').textContent = `도장 ${seen.size}/10`; if (!document.getElementById('stamps').hidden) renderStamps() }
@@ -656,8 +656,11 @@ function frame(now) {
   let ni = 0, nd = 1e9; for (let i = 1; i <= 10; i++) { const d = pos.distanceTo(PICS[i].front); if (d < nd) { nd = d; ni = i } }
   const near = me && nd < (ni === 10 ? 3.2 : 2.6) ? ni : 0;
   if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
-  if (nearI && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / LISTEN)) }
-  if (nearI && !seen.has(nearI) && listened[nearI] >= LISTEN) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
+  // 그 작품의 음악이 실제로 흘러나오는 동안만 30초를 셉니다 (소리 꺼짐·불러오는 중·다른 곡이면 멈춤)
+  const hearing = nearI && soundOn && ac && ac.state === 'running' && playing && playing.name === KEYS[nearI] && !bufLoading.has(KEYS[nearI]) && (playing.real || !(CFG.audio && CFG.audio[nearI]) || bufFail.has(KEYS[nearI]));
+  { const sl = document.getElementById('seal'), hi = sl && sl.querySelector('.st i'); if (hi) { const want2 = !soundOn ? '소리를 켜 주세요' : hearing ? '듣는 중…' : '음악 준비 중'; if (hi.textContent !== want2) hi.textContent = want2 } }
+  if (hearing && !seen.has(nearI)) { listened[nearI] = (listened[nearI] || 0) + dt; const sl = document.getElementById('seal'), pr = sl && sl.querySelector('.prg'); if (pr) pr.style.strokeDashoffset = C36 * (1 - Math.min(1, listened[nearI] / LISTEN)) }
+  if (nearI && !seen.has(nearI) && listened[nearI] >= LISTEN) { seen.add(nearI); store.set('pae-seen3', [...seen]); updCount(); { const sl = document.getElementById('seal'); if (sl) { sl.className = 'seal done pop'; sl.querySelector('.st').innerHTML = '관람<b>완료!</b>'; plaque.classList.remove('thump'); void plaque.offsetWidth; plaque.classList.add('thump') } } if (seen.size === 10) { store.set('pae-done', Date.now()); toast('도장 10개 완성! 산책 완주'); setTimeout(openStamps, 1600) } else toast(`관람 도장 ${seen.size}/10`) }
   want = nearI ? KEYS[nearI] : 'promenade';
   if (me) { me.position.set(pos.x, seated ? .3 : moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI && !seated; animateAvatar(me, walkT, moving, !!seated); sendPresence(false); if ((t * 4 | 0) !== updSit.k) { updSit.k = t * 4 | 0; updSit() } }
   for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.st ? .3 : o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv, o.st) }
