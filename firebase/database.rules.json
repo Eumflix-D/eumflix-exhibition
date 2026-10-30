@@ -11,6 +11,7 @@
         "c": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 6" },
         "a": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 16" },
         "b": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 16" },
+        "k": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() < 6" },
         "mv": { ".validate": "newData.isBoolean()" },
         "cl": { ".validate": "newData.isNumber()" },
         "t": { ".validate": "newData.val() === now" },

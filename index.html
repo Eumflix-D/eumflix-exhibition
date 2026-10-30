@@ -82,29 +82,40 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 .vid-frame iframe,.vid-frame > div{position:absolute;inset:0;width:100%;height:100%}
 @media (max-width:560px){#vid{width:200px;bottom:auto;top:calc(108px + env(safe-area-inset-top,0px))}#vid.big{width:calc(100% - 32px)}}
 
-/* 입장 */
-#gate{position:fixed;inset:0;z-index:20;background:var(--paper);overflow:auto;
-  padding:calc(28px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px))}
-.g-wrap{max-width:1080px;margin:0 auto;min-height:100%;display:grid;grid-template-columns:1.15fr 1fr;gap:56px;align-items:center}
-.eyebrow{font-size:.82rem;font-weight:600;color:var(--sub)}
-.g-title{font-size:clamp(3rem,9vw,6.4rem);font-weight:800;line-height:1;letter-spacing:-.045em;margin:14px 0 14px}
-.g-sub{font-size:1.05rem;color:var(--sub);margin:0 0 28px}
-.facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border-top:2px solid var(--ink);margin:0 0 30px}
-.facts div{padding:10px 12px 0 0}
-.facts dt{font-size:.72rem;color:var(--muted)}
-.facts dd{margin:2px 0 0;font-weight:700;font-size:.95rem}
-.me{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
-.me .k{font-size:.78rem;color:var(--muted);width:100%}
-.me b{font-size:1.35rem;font-weight:800}
-.me button{background:none;border:0;padding:0;font-size:.85rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer;color:var(--sub)}
-.swatches{display:flex;gap:8px;margin-bottom:28px}
-.swatches button{width:30px;height:30px;border:0;cursor:pointer;border-radius:50%}
-.swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px var(--paper),0 0 0 4px var(--ink)}
-.enter{background:var(--ink);color:#fff;border:0;font-size:1rem;font-weight:700;padding:15px 34px;cursor:pointer}
-.keys{font-size:.8rem;color:var(--muted);margin-top:16px}
-.plan{width:100%;max-width:100%;height:auto;display:block}
-.plan-cap{font-size:.75rem;color:var(--muted);margin-top:10px;display:flex;justify-content:space-between}
-@media (max-width:820px){.g-wrap{grid-template-columns:1fr;gap:28px}.plan-box{max-width:240px;opacity:.9}.g-title{font-size:clamp(3rem,15vw,4.6rem)}.facts{grid-template-columns:repeat(2,minmax(0,1fr));row-gap:6px}}
+/* 입장: 어두운 전시실 + 왼쪽 안내판 (뒤에 실제 3D 전시실이 비쳐요) */
+#gate{position:fixed;inset:0;z-index:20;overflow:auto;color:#f3f1ec;
+  background:linear-gradient(90deg,rgba(12,11,10,.94) 0%,rgba(12,11,10,.82) 34%,rgba(12,11,10,0) 62%);
+  padding:calc(36px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(28px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px));
+  display:flex;align-items:center}
+.at-gate .top,.at-gate #mini,.at-gate #clap,.at-gate .hint{visibility:hidden}
+.g-panel{width:min(460px,100%);margin-left:max(0px,calc((100vw - 1180px)/2))}
+.g-logo{display:block;height:34px;width:auto;margin-bottom:26px}
+.eyebrow{font-size:.8rem;color:#a9a39a;letter-spacing:.02em}
+.g-title{font-size:clamp(2.8rem,6.4vw,4.8rem);font-weight:800;line-height:1.02;letter-spacing:-.045em;margin:10px 0 14px;text-wrap:balance}
+.g-sub{color:#c9c3b9;margin:0 0 26px;max-width:36ch}
+.g-sec{border-top:1px solid rgba(255,255,255,.16);padding:14px 0 16px}
+.g-sec.two{display:grid;grid-template-columns:auto 1fr;gap:28px}
+.g-k{font-size:.74rem;color:#a9a39a;margin-bottom:8px}
+.k-row{display:flex;align-items:center;gap:8px}
+.k-row > button{flex:0 0 auto;width:32px;height:32px;border:1px solid rgba(255,255,255,.3);background:none;color:#f3f1ec;font-size:1.2rem;line-height:1;cursor:pointer;border-radius:50%}
+#kinds{display:flex;gap:6px;flex-wrap:wrap;min-width:0}
+#kinds button{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.18);color:#e8e4dc;padding:6px 11px;font-size:.84rem;cursor:pointer;border-radius:999px}
+#kinds button[aria-pressed="true"]{background:#f3f1ec;color:#141210;border-color:#f3f1ec;font-weight:700}
+.k-desc{font-size:.8rem;color:#a9a39a;margin-top:8px;min-height:1.2em}
+.me{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.me b{font-size:1.1rem;font-weight:800}
+.me button{background:none;border:0;padding:0;font-size:.8rem;text-decoration:underline;text-underline-offset:3px;cursor:pointer;color:#a9a39a}
+.swatches{display:flex;gap:7px}
+.swatches button{width:26px;height:26px;border:0;cursor:pointer;border-radius:50%}
+.swatches button[aria-pressed="true"]{box-shadow:0 0 0 2px #141210,0 0 0 4px #f3f1ec}
+.enter{margin-top:8px;background:#f3f1ec;color:#141210;border:0;font-size:1rem;font-weight:800;padding:15px 40px;cursor:pointer}
+.enter:hover{background:#fff}
+.keys{font-size:.76rem;color:#8d877e;margin-top:14px}
+@media (max-width:820px){
+  #gate{align-items:flex-end;background:linear-gradient(0deg,rgba(12,11,10,.96) 0%,rgba(12,11,10,.9) 52%,rgba(12,11,10,0) 74%)}
+  .g-panel{margin:0}.g-logo{height:26px;margin-bottom:14px}.g-title{font-size:2.6rem;margin:6px 0 8px}.g-sub{margin-bottom:14px;font-size:.9rem}
+  .g-sec{padding:10px 0 12px}.g-sec.two{gap:18px}
+}
 
 /* 감상평 */
 #gb{position:fixed;inset:0;z-index:30;background:rgba(244,243,240,.9);backdrop-filter:blur(4px);display:grid;place-items:center;
@@ -135,7 +146,7 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 @media (prefers-reduced-motion:reduce){.label,.toast{transition:none}.seen.pop{animation:none}}
 </style>
 </head>
-<body>
+<body class="at-gate">
 <div id="stage" aria-label="3D 전시장"></div>
 
 <div class="top">
@@ -174,37 +185,22 @@ button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible,
 </div>
 
 <div id="gate">
-  <div class="g-wrap">
-    <div>
-      <img class="g-logo" src="assets/brand/eumflix-logo.png" alt="음플릭스"><div class="eyebrow">온라인 전시</div>
-      <h1 class="g-title">전람회의<br>그림</h1>
-      <p class="g-sub">모데스트 무소륵스키, 1874. 그림 사이를 걸으면 프롬나드가, 작품 앞에 서면 그 곡이 흘러요.</p>
-      <dl class="facts">
-        <div><dt>작품</dt><dd>10점</dd></div>
-        <div><dt>관람 시간</dt><dd>약 15분</dd></div>
-        <div><dt>관람료</dt><dd>무료</dd></div>
-        <div><dt>함께 관람</dt><dd id="gateLive">누구나</dd></div>
-      </dl>
-      <div class="me"><span class="k">오늘 관람객 이름표</span><b id="nickname"></b><button id="reroll" type="button">다른 이름 뽑기</button></div>
-      <div class="swatches" id="sw" role="group" aria-label="아바타 옷 색"></div>
-      <button class="enter" id="enter">입장하기</button>
-      <div class="keys">컴퓨터는 방향키·WASD, 휴대폰은 왼쪽 아래 조이스틱이나 바닥 터치로 걸어요.</div>
+  <div class="g-panel">
+    <img class="g-logo" src="assets/brand/eumflix-logo.png" alt="음플릭스">
+    <div class="eyebrow">온라인 전시 · 모데스트 무소륵스키, 1874</div>
+    <h1 class="g-title">전람회의 그림</h1>
+    <p class="g-sub">불 꺼진 전시실에 그림 열 점이 걸려 있어요. 입장하면 불이 켜지고, 그림 앞에 서면 그 곡이 흘러요.</p>
+    <div class="g-sec">
+      <div class="g-k">캐릭터 고르기</div>
+      <div class="k-row"><button id="kPrev" type="button" aria-label="이전 캐릭터">‹</button><div id="kinds" role="group" aria-label="캐릭터"></div><button id="kNext" type="button" aria-label="다음 캐릭터">›</button></div>
+      <div class="k-desc" id="kindDesc"></div>
     </div>
-    <div class="plan-box">
-      <svg class="plan" viewBox="0 0 400 520" role="img" aria-label="전시실 평면도">
-        <rect x="40" y="10" width="320" height="490" fill="#f4f3f0" stroke="#161616" stroke-width="3"/>
-        <rect x="170" y="490" width="60" height="14" fill="#ffffff"/>
-        <text x="200" y="516" text-anchor="middle" font-size="12" fill="#55524c" font-family="Pretendard, sans-serif">입구</text>
-        <g font-family="Pretendard, sans-serif" font-size="13" font-weight="700" text-anchor="middle">
-          <g fill="#161616"><rect x="40" y="398" width="6" height="64"/><rect x="40" y="318" width="6" height="64"/><rect x="40" y="238" width="6" height="64"/><rect x="40" y="158" width="6" height="64"/><rect x="40" y="78" width="6" height="64"/>
-          <rect x="354" y="358" width="6" height="64"/><rect x="354" y="278" width="6" height="64"/><rect x="354" y="198" width="6" height="64"/><rect x="354" y="118" width="6" height="64"/><rect x="160" y="10" width="80" height="6"/></g>
-          <g fill="#55524c"><text x="64" y="435">1</text><text x="64" y="355">3</text><text x="64" y="275">5</text><text x="64" y="195">7</text><text x="64" y="115">9</text><text x="336" y="395">2</text><text x="336" y="315">4</text><text x="336" y="235">6</text><text x="336" y="155">8</text><text x="200" y="36">10</text></g>
-        </g>
-        <path d="M200 470 C 130 455, 110 440, 130 430 S 270 400, 270 390 S 130 360, 130 350 S 270 320, 270 310 S 130 280, 130 270 S 270 240, 270 230 S 130 200, 130 190 S 270 160, 270 150 S 130 120, 130 110 S 200 70, 200 50" fill="none" stroke="#2346d1" stroke-width="2" stroke-dasharray="5 6"/>
-        <rect x="166" y="364" width="68" height="10" fill="#d8cbb8"/><rect x="166" y="184" width="68" height="10" fill="#d8cbb8"/>
-      </svg>
-      <div class="plan-cap"><span>전시실 평면도</span><span>점선: 프롬나드 동선</span></div>
+    <div class="g-sec two">
+      <div><div class="g-k">색</div><div class="swatches" id="sw" role="group" aria-label="색"></div></div>
+      <div><div class="g-k">이름표</div><div class="me"><b id="nickname"></b><button id="reroll" type="button">다시 뽑기</button></div></div>
     </div>
+    <button class="enter" id="enter">입장하기</button>
+    <div class="keys">컴퓨터는 방향키·WASD, 휴대폰은 조이스틱이나 바닥 터치로 걸어요.</div>
   </div>
 </div>
 

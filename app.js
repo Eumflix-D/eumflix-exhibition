@@ -244,10 +244,12 @@ const W2 = 7, LEN = 48;
 const stage = document.getElementById('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2)); renderer.outputEncoding = THREE.sRGBEncoding; stage.appendChild(renderer.domElement);
-const scene = new THREE.Scene(); scene.background = new THREE.Color('#eceae6'); scene.fog = new THREE.Fog('#eceae6', 28, 60);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#0f0e0d'); scene.fog = new THREE.Fog('#0f0e0d', 6, 26);
 const camera = new THREE.PerspectiveCamera(55, 1, .1, 120);
-scene.add(new THREE.HemisphereLight('#ffffff', '#d8d2c8', .95));
-const sun = new THREE.DirectionalLight('#ffffff', .35); sun.position.set(4, 12, 2); scene.add(sun);
+const hemi = new THREE.HemisphereLight('#ffffff', '#d8d2c8', .12); scene.add(hemi);
+const sun = new THREE.DirectionalLight('#ffffff', .05); sun.position.set(4, 12, 2); scene.add(sun);
+const spot = new THREE.SpotLight('#ffe9c4', 2.6, 16, .42, .55, 1.2); spot.position.set(0, 5.6, -2.6); scene.add(spot); scene.add(spot.target);
+const BRIGHT = new THREE.Color('#eceae6'), DARK = new THREE.Color('#0f0e0d'); let lit = 0;
 function canvasTex(w, h, fn, rep) { const c = document.createElement('canvas'); c.width = w; c.height = h; const g = c.getContext('2d'); fn(g, w, h); const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; if (rep) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rep[0], rep[1]) } t.anisotropy = 8; return t }
 // 밝은 오크 마루 (길게 깐 널)
 const floorTex = canvasTex(512, 512, (g) => { const tones = ['#cdb08a', '#c8aa83', '#d2b691', '#c4a57e']; for (let y = 0; y < 16; y++) { const off = (y * 197) % 512; for (let k = -1; k < 2; k++) { g.fillStyle = tones[(y + k + 4) % 4]; g.fillRect(off + k * 512, y * 32, 512, 32) } g.fillStyle = 'rgba(90,60,30,.10)'; g.fillRect(0, y * 32, 512, 1); g.fillRect(off % 512, y * 32, 1, 32) } for (let i = 0; i < 900; i++) { g.fillStyle = 'rgba(120,85,50,.05)'; g.fillRect(Math.random() * 512, Math.random() * 512, 30 + Math.random() * 60, 1) } }, [3, 12]);
@@ -320,18 +322,50 @@ function nameTag(text, mine) {
   const w = Math.min(250, g.measureText(text).width + 28); g.fillStyle = mine ? '#161616' : 'rgba(255,255,255,.94)'; g.fillRect((256 - w) / 2, 10, w, 44); g.fillStyle = mine ? '#ffffff' : '#161616'; g.textAlign = 'center'; g.fillText(text, 128, 42);
   const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthTest: false })); s.scale.set(1.2, .3, 1); s.position.y = 2.15; s.renderOrder = 10; return s
 }
-function makeAvatar(color, name, mine) {
-  const g = new THREE.Group(); const robe = new THREE.MeshLambertMaterial({ color });
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(.28, .5, 1.1, 20), robe); body.position.y = .55; g.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(.36, 24, 18), new THREE.MeshLambertMaterial({ color: '#e8b98f' })); head.position.y = 1.45; g.add(head);
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(.375, 24, 12, 0, Math.PI * 2, 0, Math.PI * .42), new THREE.MeshLambertMaterial({ color: '#3a2618' })); hair.position.y = 1.47; hair.rotation.x = -.25; g.add(hair);
-  const eyeM = new THREE.MeshBasicMaterial({ color: '#1a0f0a' });[-.12, .12].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.045, 8, 8), eyeM); e.position.set(x, 1.45, .33); g.add(e) });
-  const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .3 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; g.add(sh);
-  const tag = nameTag(name, mine); g.add(tag); g.userData = { body, head, tag }; scene.add(g); return g;
+const KINDS = [{ n: '학생', d: '교복 재킷' }, { n: '단발 학생', d: '교복 원피스' }, { n: '화가', d: '베레모와 팔레트' }, { n: '지휘자', d: '연미복과 지휘봉' }, { n: '바이올리니스트', d: '바이올린을 든 연주자' }, { n: '고양이', d: '꼬리 달린 관람객' }];
+const MAT = {}; const M = c => MAT[c] || (MAT[c] = new THREE.MeshLambertMaterial({ color: c }));
+function onHead(x, dy, r) { return Math.sqrt(Math.max(0, r * r - x * x - dy * dy)) }
+function makeAvatar(color, name, mine, kind) {
+  kind = Math.abs(kind | 0) % KINDS.length; const cat = kind === 5, SK = '#f0c7a0';
+  const g = new THREE.Group();
+  const bodyC = kind === 2 ? '#efe6d4' : kind === 3 ? '#1b1b1f' : color;
+  const legs = [-.12, .12].map(x => { const p = new THREE.Group(); p.position.set(x, .45, 0); const l = new THREE.Mesh(new THREE.CylinderGeometry(.09, .085, .45, 10), M(cat ? color : '#2b2b33')); l.position.y = -.225; p.add(l); const s = new THREE.Mesh(new THREE.SphereGeometry(.1, 10, 8), M(cat ? color : '#1a1a1a')); s.scale.set(1, .6, 1.4); s.position.set(0, -.44, .04); p.add(s); g.add(p); return p });
+  const dress = kind === 1 || kind === 4;
+  const body = new THREE.Mesh(dress ? new THREE.CylinderGeometry(.25, .46, .8, 20) : new THREE.CylinderGeometry(.27, .31, .72, 20), M(bodyC)); body.position.y = dress ? .83 : .8; g.add(body);
+  if (kind === 0 || kind === 1) { const c = new THREE.Mesh(new THREE.ConeGeometry(.12, .2, 3), M('#ffffff')); c.position.set(0, 1.08, .21); c.rotation.x = Math.PI; g.add(c); const t = new THREE.Mesh(new THREE.BoxGeometry(.06, .2, .02), M('#b3262b')); t.position.set(0, 1.0, .29); g.add(t) }
+  if (kind === 3) { const s = new THREE.Mesh(new THREE.PlaneGeometry(.2, .5), M('#ffffff')); s.position.set(0, .88, .3); g.add(s); const bt = new THREE.Mesh(new THREE.BoxGeometry(.2, .07, .04), M(color)); bt.position.set(0, 1.1, .3); g.add(bt); const tl = new THREE.Mesh(new THREE.BoxGeometry(.44, .5, .05), M('#1b1b1f')); tl.position.set(0, .5, -.28); tl.rotation.x = .18; g.add(tl) }
+  if (kind === 2) { const sc = new THREE.Mesh(new THREE.TorusGeometry(.24, .06, 8, 20), M(color)); sc.rotation.x = Math.PI / 2; sc.position.y = 1.15; g.add(sc) }
+  const arms = [-1, 1].map(s => { const p = new THREE.Group(); p.position.set(s * .35, 1.1, 0); const a = new THREE.Mesh(new THREE.CylinderGeometry(.075, .07, .48, 10), M(bodyC)); a.position.y = -.24; p.add(a); const h = new THREE.Mesh(new THREE.SphereGeometry(.085, 10, 8), M(cat ? color : SK)); h.position.y = -.5; p.add(h); g.add(p); return p });
+  if (kind === 2) { const pal = new THREE.Mesh(new THREE.CylinderGeometry(.17, .17, .03, 18), M('#c99a5b')); pal.position.set(-.02, -.55, .14); pal.rotation.x = Math.PI / 2; arms[0].add(pal);[['#d33', -.07], ['#36c', 0], ['#fc3', .07]].forEach(([c, x]) => { const d = new THREE.Mesh(new THREE.SphereGeometry(.03, 6, 6), M(c)); d.position.set(x, -.48, .17); arms[0].add(d) }) }
+  if (kind === 3) { const bat = new THREE.Mesh(new THREE.CylinderGeometry(.012, .008, .5, 6), M('#f5f5f5')); bat.position.set(0, -.62, .22); bat.rotation.x = 1.1; arms[1].add(bat) }
+  if (kind === 4) { const v = new THREE.Group(); const vb = new THREE.Mesh(new THREE.SphereGeometry(.15, 16, 12), M('#9a5422')); vb.scale.set(1, .55, 1.5); v.add(vb); const nk = new THREE.Mesh(new THREE.BoxGeometry(.045, .045, .38), M('#2a1a10')); nk.position.z = .36; v.add(nk); v.position.set(-.26, 1.2, .14); v.rotation.set(.1, .7, .2); g.add(v); arms[0].rotation.set(-.9, 0, -.3) }
+  const R = .42, HY = 1.58;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(R, 28, 20), M(cat ? color : SK)); head.position.y = HY; g.add(head);
+  const cap = (c, cov, tilt, y) => { const h = new THREE.Mesh(new THREE.SphereGeometry(R + .025, 24, 14, 0, Math.PI * 2, 0, Math.PI * cov), M(c)); h.position.y = y || HY + .02; h.rotation.x = tilt; g.add(h); return h };
+  if (kind === 0) cap('#2e2219', .45, -.3);
+  if (kind === 1) cap('#2e2219', .62, -.5);
+  if (kind === 2) { cap('#6b4a2e', .4, -.3); const b = new THREE.Mesh(new THREE.CylinderGeometry(.34, .4, .1, 24), M(color)); b.position.set(.07, HY + .4, -.02); b.rotation.z = -.28; g.add(b); const k = new THREE.Mesh(new THREE.SphereGeometry(.04, 8, 6), M(color)); k.position.set(.05, HY + .47, -.02); g.add(k) }
+  if (kind === 3) cap('#d8d6d0', .42, -.35);
+  if (kind === 4) { cap('#5a3420', .55, -.45); const bk = new THREE.Mesh(new THREE.CylinderGeometry(.36, .3, .72, 18, 1, true, Math.PI * .5, Math.PI), new THREE.MeshLambertMaterial({ color: '#5a3420', side: THREE.DoubleSide })); bk.position.set(0, 1.32, -.06); g.add(bk) }
+  if (cat) {
+    [-1, 1].forEach(s => { const e = new THREE.Mesh(new THREE.ConeGeometry(.13, .26, 4), M(color)); e.position.set(s * .24, HY + .37, 0); e.rotation.z = -s * .35; g.add(e); const n = new THREE.Mesh(new THREE.ConeGeometry(.065, .14, 4), M('#f2b8b8')); n.position.set(s * .24, HY + .35, .05); n.rotation.z = -s * .35; g.add(n) });
+    const tl = new THREE.Mesh(new THREE.TorusGeometry(.26, .055, 8, 18, Math.PI * 1.1), M(color)); tl.position.set(0, .62, -.34); tl.rotation.y = Math.PI / 2; g.add(tl);
+    const nose = new THREE.Mesh(new THREE.SphereGeometry(.035, 8, 6), M('#e88a9a')); nose.position.set(0, HY - .07, onHead(0, -.07, R) + .01); g.add(nose)
+  }
+  const eyeM = new THREE.MeshBasicMaterial({ color: '#1a1210' });[-.14, .14].forEach(x => { const e = new THREE.Mesh(new THREE.SphereGeometry(.05, 10, 8), eyeM); e.position.set(x, HY + .02, onHead(x, .02, R) - .015); e.scale.set(1, 1.25, .6); g.add(e) });
+  const blushM = new THREE.MeshBasicMaterial({ color: '#f2a39a', transparent: true, opacity: .55 });[-.24, .24].forEach(x => { const b = new THREE.Mesh(new THREE.CircleGeometry(.055, 12), blushM); b.position.set(x, HY - .1, onHead(x, -.1, R) + .006); b.rotation.y = Math.asin(x / R); g.add(b) });
+  const sh = new THREE.Mesh(new THREE.CircleGeometry(.5, 20), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .25 })); sh.rotation.x = -Math.PI / 2; sh.position.y = .02; g.add(sh);
+  const tag = nameTag(name, mine); tag.position.y = 2.45; g.add(tag);
+  g.userData = { body, head, tag, arms, legs, kind }; scene.add(g); return g;
+}
+function animateAvatar(g, ph, mv) {
+  const u = g.userData, s = mv && !RM ? Math.sin(ph) : 0;
+  u.legs[0].rotation.x = s * .5; u.legs[1].rotation.x = -s * .5;
+  if (u.kind !== 4) u.arms[0].rotation.x = -s * .55; u.arms[1].rotation.x = u.kind === 3 && !mv ? -.6 + Math.sin(performance.now() / 300) * .25 : s * .55;
 }
 
 /* ================= 상태 ================= */
-let me = null, myColor = store.get('pae-color', 0), myA = store.get('pae-a', Math.floor(Math.random() * 16)), myB = store.get('pae-b', Math.floor(Math.random() * 16));
+let me = null, myK = store.get('pae-k', 0), preview = null, myColor = store.get('pae-color', 0), myA = store.get('pae-a', Math.floor(Math.random() * 16)), myB = store.get('pae-b', Math.floor(Math.random() * 16));
 let heading = Math.PI, camYaw = 0, walkT = 0, moving = false;
 const pos = new THREE.Vector3(0, 0, -3.5);
 let target = null, nearI = 0, nearSince = 0;
@@ -433,9 +467,9 @@ const others = new Map(); let fb = null, myRef = null, serverOffset = 0;
 function updPeople() { const n = [...others.values()].filter(o => o.on).length + 1; document.getElementById('people').textContent = n > 1 ? `지금 ${n}명 관람 중` : (fb ? '지금 나 혼자 관람 중' : '혼자 관람 중') }
 function upsertPeer(key, v) {
   if (!v || typeof v.x !== 'number' || typeof v.z !== 'number') return;
-  const c = Math.abs(v.c | 0) % COLORS.length, a = Math.abs(v.a | 0) % 16, b = Math.abs(v.b | 0) % 16, name = nickOf(a, b);
+  const c = Math.abs(v.c | 0) % COLORS.length, a = Math.abs(v.a | 0) % 16, b = Math.abs(v.b | 0) % 16, kd = Math.abs(v.k | 0) % KINDS.length, name = nickOf(a, b);
   let o = others.get(key);
-  if (!o || o.c !== c || o.name !== name) { if (o) scene.remove(o.g); o = { g: makeAvatar(COLORS[c], name, false), c, name, cur: new THREE.Vector3(v.x, 0, v.z), r: +v.r || 0, cl: v.cl || 0 }; others.set(key, o) }
+  if (!o || o.c !== c || o.name !== name || o.kd !== kd) { if (o) scene.remove(o.g); o = { g: makeAvatar(COLORS[c], name, false, kd), c, kd, name, cur: new THREE.Vector3(v.x, 0, v.z), r: +v.r || 0, cl: v.cl || 0 }; others.set(key, o) }
   o.tx = Math.max(-W2, Math.min(W2, v.x)); o.tz = Math.max(-LEN, Math.min(0, v.z)); o.tr = +v.r || 0; o.mv = !!v.mv; o.t = +v.t || 0; o.on = true;
   if (v.cl && v.cl !== o.cl) { o.cl = v.cl; if (Date.now() + serverOffset - v.cl < 5000) clapAt(o.g) }
   updPeople()
@@ -463,7 +497,7 @@ async function startTogether() {
 let lastSent = 0, lastClap = 0;
 function sendPresence(force) {
   if (!myRef || !me) return; const now = performance.now(); if (!force && (!moving || now - lastSent < 280)) return; lastSent = now;
-  const d = { x: +pos.x.toFixed(2), z: +pos.z.toFixed(2), r: +heading.toFixed(2), c: myColor, a: myA, b: myB, mv: !!moving, t: firebase.database.ServerValue.TIMESTAMP };
+  const d = { x: +pos.x.toFixed(2), z: +pos.z.toFixed(2), r: +heading.toFixed(2), c: myColor, a: myA, b: myB, k: myK, mv: !!moving, t: firebase.database.ServerValue.TIMESTAMP };
   if (lastClap) d.cl = lastClap; myRef.set(d).catch(() => { })
 }
 let wasMoving = false;
@@ -498,17 +532,24 @@ const mini = document.getElementById('mini'), mg = mini.getContext('2d');
 const mapXY = (x, z) => [20 + (-z / LEN) * 360, 64 + (x / W2) * 50];
 mini.addEventListener('click', e => { const r = mini.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width * 400, my = (e.clientY - r.top) / r.height * 128; let best = 0, bd = 1e9; for (let i = 1; i <= 10; i++) { const p = PICS[i].center, [px, py] = mapXY(p.x, p.z), d = Math.hypot(px - mx, py - my); if (d < bd) { bd = d; best = i } } if (bd < 60) target = PICS[best].front.clone() });
 
-/* 입장 */
-const sw = document.getElementById('sw');
-COLORS.forEach((c, i) => { const b = document.createElement('button'); b.style.background = c; b.setAttribute('aria-label', '옷 색 ' + (i + 1)); b.setAttribute('aria-pressed', i === myColor); b.onclick = () => { myColor = i;[...sw.children].forEach((x, k) => x.setAttribute('aria-pressed', k === i)) }; sw.appendChild(b) });
+/* 입장: 어두운 전시실 입구에서 캐릭터 고르기 */
+const sw = document.getElementById('sw'), kindsEl = document.getElementById('kinds'), kindDesc = document.getElementById('kindDesc');
+const PREV = new THREE.Vector3(0, 0, -5.2);
+function buildPreview() { if (preview) scene.remove(preview); preview = makeAvatar(COLORS[myColor], nickOf(myA, myB), true, myK); preview.position.copy(PREV); preview.userData.tag.visible = false; spot.target.position.copy(PREV); kindDesc.textContent = KINDS[myK].d;[...kindsEl.children].forEach((x, k) => x.setAttribute('aria-pressed', k === myK)) }
+KINDS.forEach((kd, i) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = kd.n; b.onclick = () => { myK = i; buildPreview() }; kindsEl.appendChild(b) });
+document.getElementById('kPrev').onclick = () => { myK = (myK + KINDS.length - 1) % KINDS.length; buildPreview() };
+document.getElementById('kNext').onclick = () => { myK = (myK + 1) % KINDS.length; buildPreview() };
+COLORS.forEach((c, i) => { const b = document.createElement('button'); b.type = 'button'; b.style.background = c; b.setAttribute('aria-label', '색 ' + (i + 1)); b.setAttribute('aria-pressed', i === myColor); b.onclick = () => { myColor = i;[...sw.children].forEach((x, k) => x.setAttribute('aria-pressed', k === i)); buildPreview() }; sw.appendChild(b) });
 const nickEl = document.getElementById('nickname');
 function showNick() { nickEl.textContent = nickOf(myA, myB); gbNick.placeholder = nickOf(myA, myB) }
-showNick();
+document.body.classList.add('at-gate'); showNick(); buildPreview();
 document.getElementById('reroll').onclick = () => { myA = Math.floor(Math.random() * 16); myB = Math.floor(Math.random() * 16); showNick() };
 document.getElementById('enter').onclick = () => {
-  store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB);
-  document.getElementById('gate').hidden = true; initAudio(); if (ac) ac.resume();
-  me = makeAvatar(COLORS[myColor], nickOf(myA, myB) + ' (나)', true); me.position.copy(pos); startTogether();
+  store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB); store.set('pae-k', myK);
+  document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); initAudio(); if (ac) ac.resume();
+  if (preview) { scene.remove(preview); preview = null }
+  pos.copy(PREV); heading = Math.PI; camYaw = 0; camera.clearViewOffset();
+  me = makeAvatar(COLORS[myColor], nickOf(myA, myB) + ' (나)', true, myK); me.position.copy(pos); startTogether();
   setTimeout(() => document.getElementById('hint').style.opacity = 0, 9000)
 };
 const sb = document.getElementById('sound'); sb.onclick = () => { soundOn = !soundOn; sb.textContent = soundOn ? '소리 끄기' : '소리 켜기'; VID.mute(!soundOn); sb.setAttribute('aria-pressed', soundOn); if (master) master.gain.setTargetAtTime(soundOn ? .9 : 0, ac.currentTime, .1) };
@@ -519,7 +560,7 @@ function collide(p) {
   p.x = Math.max(-W2 + .6, Math.min(W2 - .6, p.x)); p.z = Math.max(-LEN + .6, Math.min(-.6, p.z));
   BENCHES.forEach(([bx, bz]) => { const hx = 1.7 + .45, hz = .45 + .45, dx = p.x - bx, dz = p.z - bz; if (Math.abs(dx) < hx && Math.abs(dz) < hz) { if (hx - Math.abs(dx) < hz - Math.abs(dz)) p.x = bx + Math.sign(dx || 1) * hx; else p.z = bz + Math.sign(dz || 1) * hz } })
 }
-function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; camera.updateProjectionMatrix() }
+function resize() { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.fov = w < h ? 68 : 55; if (!me) { if (w > 820) camera.setViewOffset(w, h, -w * .2, 0, w, h); else camera.setViewOffset(w, h, 0, h * .22, w, h) } camera.updateProjectionMatrix() }
 addEventListener('resize', resize); resize();
 const camPos = new THREE.Vector3(0, 3.2, 2), camLook = new THREE.Vector3(0, 1.4, -4); let last = performance.now(), picClock = 0;
 function frame(now) {
@@ -538,11 +579,15 @@ function frame(now) {
   if (near !== nearI) { nearI = near; nearSince = t; showPlaque(near, false); if (near) loadBuf(KEYS[near]) }
   if (nearI && !seen.has(nearI) && t - nearSince > 1.5) { seen.add(nearI); store.set('pae-seen', [...seen]); updCount(); showPlaque(nearI, true); toast(seen.size === 10 ? '열 점을 모두 감상했어요. 관람 완주!' : `관람 ${seen.size}/10 완료`) }
   want = nearI ? KEYS[nearI] : 'promenade';
-  if (me) { me.position.set(pos.x, moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI; me.userData.body.rotation.z = moving && !RM ? Math.sin(walkT) * .06 : 0; sendPresence(false) }
-  for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r }
+  if (me) { me.position.set(pos.x, moving && !RM ? Math.abs(Math.sin(walkT)) * .08 : 0, pos.z); me.rotation.y = heading; me.userData.tag.visible = !nearI; animateAvatar(me, walkT, moving); sendPresence(false) }
+  for (const o of others.values()) { o.cur.x += (o.tx - o.cur.x) * Math.min(1, dt * 6); o.cur.z += (o.tz - o.cur.z) * Math.min(1, dt * 6); o.r = angLerp(o.r, o.tr, Math.min(1, dt * 6)); o.ph = (o.ph || 0) + (o.mv ? dt * 9 : 0); o.g.position.set(o.cur.x, o.mv && !RM ? Math.abs(Math.sin(o.ph)) * .08 : 0, o.cur.z); o.g.rotation.y = o.r; animateAvatar(o.g, o.ph, o.mv) }
   for (let k = claps.length - 1; k >= 0; k--) { const c = claps[k], a = (now - c.t0) / 1400; c.s.position.y = 2.7 + a * .8; c.s.material.opacity = 1 - a; if (a >= 1) { c.g.remove(c.s); claps.splice(k, 1) } }
+  if (me && lit < 1) lit = Math.min(1, lit + dt / 1.8);
+  { const e = lit * lit * (3 - 2 * lit); hemi.intensity = .12 + .83 * e; sun.intensity = .05 + .3 * e; spot.intensity = 2.6 * (1 - e); scene.background.copy(DARK).lerp(BRIGHT, e); scene.fog.color.copy(scene.background); scene.fog.near = 6 + 22 * e; scene.fog.far = 26 + 34 * e }
+  if (preview) { preview.rotation.y = RM ? 0 : Math.sin(t * .6) * .35; animateAvatar(preview, t * 3, false) }
   let cp, cl;
-  if (nearI) { const p = PICS[nearI], back = (nearI === 10 ? 7.2 : 5.2) * (camera.aspect < 1 ? 1.45 : 1); cp = p.center.clone().addScaledVector(p.n, back).setY(2.6); cl = p.center.clone().setY(p.center.y - (camera.aspect < 1 ? 1.2 : .55)) }
+  if (!me) { const a = RM ? 0 : Math.sin(t * .25) * .35; cp = new THREE.Vector3(PREV.x + Math.sin(a) * 3.6, 1.75, PREV.z + Math.cos(a) * 3.6); cl = new THREE.Vector3(PREV.x, 1.15, PREV.z) }
+  else if (nearI) { const p = PICS[nearI], back = (nearI === 10 ? 7.2 : 5.2) * (camera.aspect < 1 ? 1.45 : 1); cp = p.center.clone().addScaledVector(p.n, back).setY(2.6); cl = p.center.clone().setY(p.center.y - (camera.aspect < 1 ? 1.2 : .55)) }
   else { cp = new THREE.Vector3(pos.x + Math.sin(camYaw) * 5.4, 3.3, pos.z + Math.cos(camYaw) * 5.4); cl = new THREE.Vector3(pos.x, 1.3, pos.z) }
   cp.x = Math.max(-W2 + .4, Math.min(W2 - .4, cp.x)); cp.z = Math.max(-LEN + .4, Math.min(-.3, cp.z));
   const k = 1 - Math.exp(-3.2 * dt); camPos.lerp(cp, k); camLook.lerp(cl, k); camera.position.copy(camPos); camera.lookAt(camLook);
