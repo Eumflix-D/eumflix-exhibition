@@ -659,7 +659,7 @@ document.getElementById('enter').onclick = () => {
   myName = nameNow(); const prob = nameProblem(myName); if (prob) { nickMsg.textContent = prob; nickIn.focus(); return }
   store.set('pae-name', nickIn.value.trim()); gbNick.placeholder = myName;
   store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB); store.set('pae-k2', myK);
-  document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); unlockSound();
+  document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); unlockSound(); if (!soundOn) toggleSound(); // 입장 화면에서 껐어도 전시실에서는 음악이 나오게
   if (preview) { scene.remove(preview); preview = null }
   pos.copy(PREV); heading = Math.PI; camYaw = 0; camera.clearViewOffset();
   me = makeAvatar(COLORS[myColor], myName + ' (나)', true, myK); me.traverse(o => { if (o.isMesh && o.material && !o.isSprite) { o.material = o.material.clone(); o.material.transparent = true } }); me.userData.fade = 1; me.position.copy(pos); startTogether();
