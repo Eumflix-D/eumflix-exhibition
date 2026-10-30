@@ -647,11 +647,19 @@ function showNick() { nickIn.placeholder = nickOf(myA, myB); gbNick.placeholder 
 nickIn.addEventListener('input', () => { nickMsg.textContent = nickIn.value.trim() ? nameProblem(nameNow()) : '' });
 document.body.classList.add('at-gate'); showNick(); buildKindGrid(); buildPreview();
 document.getElementById('reroll').onclick = () => { myA = Math.floor(Math.random() * 16); myB = Math.floor(Math.random() * 16); nickIn.value = ''; showNick() };
+/* 입장 화면에서도 프롬나드: 브라우저는 첫 터치·클릭 전에는 소리를 못 내서, 첫 손길에 음악을 켜요 */
+function unlockSound() {
+  // 아이폰 무음(진동) 모드에서도 음악이 나오도록 '재생' 모드로 바꾸기 (iOS 17+), 안 되는 기기는 무음 오디오 한 번 틀기
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback' } catch (e) { }
+  if (!unlockSound.el) { try { const sr = 8000, n = sr / 2, b = new ArrayBuffer(44 + n), v = new DataView(b), w = (o, s) => [...s].forEach((c, i) => v.setUint8(o + i, c.charCodeAt(0))); w(0, 'RIFF'); v.setUint32(4, 36 + n, true); w(8, 'WAVEfmt '); v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true); v.setUint32(28, sr, true); v.setUint16(32, 1, true); v.setUint16(34, 8, true); w(36, 'data'); v.setUint32(40, n, true); for (let i = 0; i < n; i++)v.setUint8(44 + i, 128); const au = new Audio(URL.createObjectURL(new Blob([b], { type: 'audio/wav' }))); au.loop = true; au.setAttribute('playsinline', ''); au.play().catch(() => { }); unlockSound.el = au } catch (e) { } }
+  initAudio(); if (ac && ac.state !== 'running') ac.resume();
+}
+document.getElementById('gate').addEventListener('pointerdown', unlockSound, { capture: true });
 document.getElementById('enter').onclick = () => {
   myName = nameNow(); const prob = nameProblem(myName); if (prob) { nickMsg.textContent = prob; nickIn.focus(); return }
   store.set('pae-name', nickIn.value.trim()); gbNick.placeholder = myName;
   store.set('pae-color', myColor); store.set('pae-a', myA); store.set('pae-b', myB); store.set('pae-k2', myK);
-  document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); initAudio(); if (ac) ac.resume();
+  document.getElementById('gate').hidden = true; document.body.classList.remove('at-gate'); unlockSound();
   if (preview) { scene.remove(preview); preview = null }
   pos.copy(PREV); heading = Math.PI; camYaw = 0; camera.clearViewOffset();
   me = makeAvatar(COLORS[myColor], myName + ' (나)', true, myK); me.traverse(o => { if (o.isMesh && o.material && !o.isSprite) { o.material = o.material.clone(); o.material.transparent = true } }); me.userData.fade = 1; me.position.copy(pos); startTogether();
