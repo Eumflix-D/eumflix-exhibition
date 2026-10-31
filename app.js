@@ -22,6 +22,7 @@ const ROOMS=[null,
  {t:'키이우(키예프)의 대문',o:'The Great Gate of Kiev',p:['하르트만이 설계 공모에 낸 키이우 성문 그림이에요. 실제로 지어지지는 않았어요.','장엄한 찬가 사이로 프롬나드 주제가 다시 나타나요. 산책하던 관람객이 마침내 대문을 지나는 거예요.'],
   i:'라벨 편곡: <b>오케스트라 전체와 종소리</b>가 울려요.',m:'종소리와 장엄한 화음으로 쌓은 프롬나드',q:'전람회의 그림 키예프의 대문'}
 ];
+const LOST=new Set([1,2,3,4,7]); /* 원화가 남아 있지 않은 곡 */
 const KEYS=[null,'gnomus','castle','tuileries','bydlo','chicks','goldenberg','limoges','catacombs','babayaga','gate'];
 const COLORS=['#2f4b6e','#b5543c','#5b7d5a','#d6a23a','#6e5f8f','#3a3a3a'];
 const yt=q=>'https://www.youtube.com/results?search_query='+encodeURIComponent(q);
@@ -454,7 +455,7 @@ function showPlaque(i, fresh) {
   if (!i) { plaque.classList.remove('on'); return }
   const r = ROOMS[i], link = listenLink(i), cnt = (GB.byPic[i] || []).length;
   plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p><button class="lbl-toggle" type="button">설명 펼치기</button>
-   <p>${r.p[0]}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
+   <p>${r.p[0]}</p><p class="src">${LOST.has(i) ? '하르트만의 원래 그림은 사라졌어요. 이 그림은 음악과 기록을 바탕으로 상상해서 그린 거예요.' : '하르트만 원화'}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><button class="btn ghost zoomit" type="button">그림 크게 보기 ⤢</button><a class="btn primary" target="_blank" rel="noopener"></a>
    <a class="btn ghost cmt" target="_blank" rel="noopener">영상 댓글로 감상평 남기기 ↗</a></div>
    ${sealHTML(i)}`;
