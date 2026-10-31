@@ -455,7 +455,7 @@ function showPlaque(i, fresh) {
   if (!i) { plaque.classList.remove('on'); return }
   const r = ROOMS[i], link = listenLink(i), cnt = (GB.byPic[i] || []).length;
   plaque.innerHTML = `<div class="no">${String(i).padStart(2, '0')} <span>/ 10</span></div><h1></h1><p class="orig"></p><button class="lbl-toggle" type="button">설명 펼치기</button>
-   <p>${r.p[0]}</p><p class="src">${LOST.has(i) ? '원래 그림은 사라졌어요. 대신 분위기가 비슷한 다른 그림을 걸었어요.' : '무소륵스키가 본 하르트만의 원래 그림이에요.'}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
+   <p>${r.p[0]}</p><p class="src">${LOST.has(i) ? '원래 그림은 소실됐어요.' : '무소륵스키가 본 하르트만의 원래 그림이에요.'}</p><p class="more">${r.p[1]}</p><div class="now">♪ <span class="nowtxt"></span><br>${r.i}</div>
    <div class="row"><button class="btn ghost zoomit" type="button">그림 크게 보기 ⤢</button><a class="btn primary" target="_blank" rel="noopener"></a>
    <a class="btn ghost cmt" target="_blank" rel="noopener">영상 댓글로 감상평 남기기 ↗</a></div>
    ${sealHTML(i)}`;
